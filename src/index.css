@@ -8,6 +8,7 @@
 
 body {
   @apply bg-brand-ivory text-brand-text min-h-screen;
+  transition: background-color 0.4s ease, color 0.4s ease;
 }
 
 .heritage-gradient {
@@ -39,3 +40,91 @@ body {
 ::-webkit-scrollbar-thumb {
   @apply bg-brand-gold/30 rounded-full hover:bg-brand-gold/50 transition-colors;
 }
+
+/* ====================== */
+/* LUXURY DARK MODE       */
+/* ====================== */
+
+.dark body,
+.dark {
+  --dark-bg: #0F1219;
+  --dark-surface: #161B26;
+  --dark-card: #1C2233;
+  --dark-border: rgba(196, 154, 26, 0.12);
+  --dark-text: #E8E4DC;
+  --dark-text-muted: rgba(232, 228, 220, 0.5);
+}
+
+.dark body {
+  background-color: var(--dark-bg) !important;
+  color: var(--dark-text) !important;
+}
+
+/* Backgrounds */
+.dark .bg-brand-ivory,
+.dark .bg-surface-container { background-color: var(--dark-bg) !important; }
+
+.dark .bg-white,
+.dark .bg-white\/80,
+.dark .bg-white\/50,
+.dark .bg-white\/40 { background-color: var(--dark-card) !important; }
+
+.dark .bg-surface-container\/30,
+.dark .bg-surface-container\/20,
+.dark .bg-surface-container\/50 { background-color: rgba(28, 34, 51, 0.5) !important; }
+
+.dark .bg-brand-ivory\/50 { background-color: rgba(22, 27, 38, 0.5) !important; }
+
+/* Text */
+.dark .text-brand-navy { color: #E8E4DC !important; }
+.dark .text-brand-text { color: var(--dark-text) !important; }
+.dark .text-on-surface { color: var(--dark-text) !important; }
+.dark .text-on-surface-variant { color: var(--dark-text-muted) !important; }
+
+/* Borders */
+.dark .border-brand-gold\/10,
+.dark .border-brand-gold\/5,
+.dark .border-brand-gold\/20 { border-color: var(--dark-border) !important; }
+
+/* NavBar & Sidebar - special surfaces */
+.dark header.fixed { background-color: rgba(22, 27, 38, 0.9) !important; }
+.dark aside, .dark motion\.aside { background-color: var(--dark-surface) !important; }
+
+/* Cards and hover states */
+.dark .hover\:bg-brand-gold\/5:hover { background-color: rgba(196, 154, 26, 0.08) !important; }
+.dark .hover\:bg-white\/50:hover { background-color: rgba(28, 34, 51, 0.6) !important; }
+.dark .hover\:bg-brand-gold\/\[0\.02\]:hover { background-color: rgba(196, 154, 26, 0.06) !important; }
+
+/* Inputs */
+.dark input, .dark select {
+  background-color: var(--dark-card) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+
+.dark input::placeholder { color: var(--dark-text-muted) !important; }
+
+/* Scrollbar */
+.dark ::-webkit-scrollbar-track { background-color: var(--dark-bg) !important; }
+.dark ::-webkit-scrollbar-thumb { background-color: rgba(196, 154, 26, 0.2) !important; }
+
+/* Glass effect */
+.dark .glass-panel {
+  background: rgba(22, 27, 38, 0.8) !important;
+}
+
+/* Soft glow */
+.dark .soft-glow {
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Toast override */
+.dark .heritage-toast {
+  background-color: var(--dark-card) !important;
+  color: var(--dark-text) !important;
+  border-color: var(--dark-border) !important;
+}
+
+/* No-scrollbar utility */
+.no-scrollbar::-webkit-scrollbar { display: none; }
+.no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
