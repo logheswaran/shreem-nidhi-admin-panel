@@ -1,24 +1,21 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext } from 'react'
 
 const ThemeContext = createContext()
 
+/**
+ * ThemeProvider decommissioned - Light Mode Only
+ * Night mode has been removed per user request.
+ */
 export const ThemeProvider = ({ children }) => {
-  const [isDark, setIsDark] = useState(() => {
-    return localStorage.getItem('sreemnidhi_theme') === 'dark'
-  })
+  // Always force light mode
+  const isDark = false
+  const toggleTheme = () => console.log('Night mode is no longer available.')
 
-  useEffect(() => {
-    const root = document.documentElement
-    if (isDark) {
-      root.classList.add('dark')
-      localStorage.setItem('sreemnidhi_theme', 'dark')
-    } else {
-      root.classList.remove('dark')
-      localStorage.setItem('sreemnidhi_theme', 'light')
-    }
-  }, [isDark])
-
-  const toggleTheme = () => setIsDark(prev => !prev)
+  // Ensure any leftover dark class is removed on initialization
+  React.useEffect(() => {
+    document.documentElement.classList.remove('dark')
+    localStorage.removeItem('sreemnidhi_theme')
+  }, [])
 
   return (
     <ThemeContext.Provider value={{ isDark, toggleTheme }}>

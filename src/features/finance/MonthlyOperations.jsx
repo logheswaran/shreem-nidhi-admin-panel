@@ -1,64 +1,33 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Calendar, PlayCircle, Trophy, IndianRupee, ArrowRight, Info, CheckCircle2, AlertCircle } from 'lucide-react'
-import { chitService } from '../chits/api'
-import { financeService } from './api'
+import { useActiveChits, useMonthlyOperations } from './hooks'
 import DataTable from '../../shared/components/ui/DataTable'
 import StatusBadge from '../../shared/components/ui/StatusBadge'
-import Modal from '../../shared/components/ui/Modal'
 import ConfirmDialog from '../../shared/components/ui/ConfirmDialog'
-import toast from 'react-hot-toast'
 
 const MonthlyOperations = () => {
-  const [chits, setChits] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { data: chits = [], isLoading: loading } = useActiveChits()
+  const { generateMonth, selectWinner, isProcessing } = useMonthlyOperations()
+  
   const [selectedChit, setSelectedChit] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [modalType, setModalType] = useState('') // 'generate', 'winner'
-  const [processing, setProcessing] = useState(false)
-
-  const fetchActiveChits = async () => {
-    try {
-      setLoading(true)
-      const data = await chitService.getChits()
-      setChits(data.filter(c => c.status === 'active'))
-    } catch (error) {
-      toast.error('Failed to load active schemes')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchActiveChits()
-  }, [])
 
   const handleGenerateMonth = async () => {
-    setProcessing(true)
     try {
-      toast.loading('Generating contributions for new month...', { id: 'op' })
-      await financeService.createMonthContributions(selectedChit.id)
-      toast.success('Successfully initialized next month cycle!', { id: 'op' })
+      await generateMonth(selectedChit.id)
       setIsModalOpen(false)
-      fetchActiveChits()
     } catch (error) {
-      toast.error(error.message || 'Operation failed', { id: 'op' })
-    } finally {
-      setProcessing(false)
+      // toast handled in hook
     }
   }
 
   const handleSelectWinner = async () => {
-    setProcessing(true)
     try {
-      toast.loading('Running Provably Fair winner selection...', { id: 'op' })
-      await financeService.selectWinner(selectedChit.id)
-      toast.success('Winner selected and ledger updated!', { id: 'op' })
+      await selectWinner(selectedChit.id)
       setIsModalOpen(false)
-      fetchActiveChits()
     } catch (error) {
-      toast.error(error.message || 'Winner selection failed', { id: 'op' })
-    } finally {
-      setProcessing(false)
+      // toast handled in hook
     }
   }
 
@@ -145,7 +114,7 @@ const MonthlyOperations = () => {
         }
         intent="brand"
         confirmText={modalType === 'generate' ? 'Execute Cycle ' + (selectedChit?.current_month + 1) : 'Authorize Selection'}
-        loading={processing}
+        loading={isProcessing}
       />
     </div>
   )

@@ -3,6 +3,11 @@ import toast from 'react-hot-toast'
 import {
   getDashboardStats,
   getRecentLedger,
+  getMonthlyCollectionHealth,
+  getOverdueContributions,
+  getActiveLoanHealth,
+  getPendingApplicationsCount,
+  getChitProgress,
   startMonth,
   selectWinner,
   openAuction,
@@ -16,9 +21,9 @@ export const useDashboardStats = () => {
   return useQuery({
     queryKey: ['dashboard_stats'],
     queryFn: getDashboardStats,
-    // Bonus Requirement: Auto-refresh every 30 seconds
-    refetchInterval: 30000, 
-    staleTime: 1000 * 20, // Only consider stale after 20s
+    refetchInterval: 60000, // Reduced frequency to save CPU/Memory
+    staleTime: 1000 * 30, 
+    cacheTime: 1000 * 60 * 5,
   })
 }
 
@@ -26,7 +31,28 @@ export const useRecentLedger = () => {
   return useQuery({
     queryKey: ['recent_ledger'],
     queryFn: getRecentLedger,
-    refetchInterval: 30000,
+    refetchInterval: 60000,
+    staleTime: 1000 * 30,
+    cacheTime: 1000 * 60 * 5,
+  })
+}
+
+// PROMPT 6.2: Parallelize Dashboard Queries (New Extended Data Hook)
+export const useDashboardExtendedData = () => {
+  return useQuery({
+    queryKey: ['dashboard_extended_data'],
+    queryFn: async () => {
+      const [health, overdue, loans, apps, progress] = await Promise.all([
+        getMonthlyCollectionHealth(),
+        getOverdueContributions(),
+        getActiveLoanHealth(),
+        getPendingApplicationsCount(),
+        getChitProgress()
+      ])
+      return { health, overdue, loans, apps, progress }
+    },
+    refetchInterval: 60000,
+    staleTime: 1000 * 30,
   })
 }
 

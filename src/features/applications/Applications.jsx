@@ -1,43 +1,25 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Check, X, ShieldCheck, Calendar, Phone, Info, ArrowUpRight } from 'lucide-react'
 import DataTable from '../../shared/components/ui/DataTable'
 import StatusBadge from '../../shared/components/ui/StatusBadge'
 import Modal from '../../shared/components/ui/Modal'
-import { memberService } from '../members/api'
+import { useApplications, useApplicationActions } from './hooks'
 import toast from 'react-hot-toast'
 
 const Applications = () => {
-  const [apps, setApps] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { data: apps = [], isLoading: loading } = useApplications()
+  const { approve, reject, isLoading: processing } = useApplicationActions()
+  
   const [selectedApp, setSelectedApp] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [rejectionReason, setRejectionReason] = useState('')
 
-  const fetchApps = async () => {
-    try {
-      setLoading(true)
-      const data = await memberService.getApplications()
-      setApps(data)
-    } catch (error) {
-      toast.error('Failed to load applications')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchApps()
-  }, [])
-
   const handleApprove = async () => {
     try {
-      toast.loading('Processing approval...', { id: 'approve' })
-      await memberService.approveApplication(selectedApp.id)
-      toast.success('Member application approved!', { id: 'approve' })
+      await approve(selectedApp.id)
       setIsModalOpen(false)
-      fetchApps()
     } catch (error) {
-      toast.error(error.message || 'Approval failed', { id: 'approve' })
+      // toast handled in hook
     }
   }
 
@@ -47,13 +29,10 @@ const Applications = () => {
       return
     }
     try {
-      toast.loading('Processing rejection...', { id: 'reject' })
-      await memberService.rejectApplication(selectedApp.id, rejectionReason)
-      toast.success('Application rejected', { id: 'reject' })
+      await reject({ id: selectedApp.id, reason: rejectionReason })
       setIsModalOpen(false)
-      fetchApps()
     } catch (error) {
-      toast.error(error.message || 'Rejection failed', { id: 'reject' })
+      // toast handled in hook
     }
   }
 
@@ -67,7 +46,7 @@ const Applications = () => {
           </div>
           <div>
             <p className="font-bold text-brand-navy leading-snug">{row.profiles?.full_name}</p>
-            <p className="text-[10px] text-brand-text/40 font-bold uppercase tracking-widest">{row.profiles?.phone_number}</p>
+            <p className="text-[10px] text-brand-text/40 font-bold uppercase tracking-widest">{row.profiles?.mobile_number}</p>
           </div>
         </div>
       )
@@ -140,7 +119,7 @@ const Applications = () => {
               <div className="flex-1">
                 <h4 className="text-2xl font-headline font-bold text-brand-navy leading-none">{selectedApp.profiles?.full_name}</h4>
                 <div className="flex gap-6 mt-3">
-                  <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand-text/40"><Phone className="w-3.5 h-3.5 text-brand-gold"/> {selectedApp.profiles?.phone_number}</span>
+                  <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand-text/40"><Phone className="w-3.5 h-3.5 text-brand-gold"/> {selectedApp.profiles?.mobile_number}</span>
                   <span className="flex items-center gap-2 text-[10px] font-bold uppercase tracking-widest text-brand-text/40"><Calendar className="w-3.5 h-3.5 text-brand-gold"/> {new Date(selectedApp.applied_at).toLocaleDateString()}</span>
                 </div>
               </div>
@@ -188,16 +167,24 @@ const Applications = () => {
                 </div>
                 <div className="flex gap-4">
                   <button 
+                    disabled={processing}
                     onClick={handleReject}
                     className="flex-1 py-5 border-2 border-brand-gold/10 text-brand-text/40 rounded-full font-bold text-xs uppercase tracking-widest hover:bg-red-50 hover:text-red-500 hover:border-red-100 transition-all flex items-center justify-center gap-2 group"
                   >
                     <X className="w-4 h-4 group-hover:rotate-90 transition-transform" /> Reject Admission
                   </button>
                   <button 
+                    disabled={processing}
                     onClick={handleApprove}
                     className="flex-[2] py-5 heritage-gradient text-white rounded-full font-bold text-xs uppercase tracking-widest shadow-xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-2"
                   >
-                    <Check className="w-5 h-5" /> Execute Admission
+                    {processing ? (
+                      <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                    ) : (
+                      <>
+                        <Check className="w-5 h-5" /> Execute Admission
+                      </>
+                    )}
                   </button>
                 </div>
               </div>
@@ -210,7 +197,7 @@ const Applications = () => {
                   <p className="text-sm font-headline font-bold text-brand-navy uppercase tracking-tight">Post-Review Log</p>
                   <p className="text-xs text-brand-text/60 mt-2 leading-relaxed">
                     This candidate was processed by the <span className="font-bold text-brand-gold">Security Protocol</span>. 
-                    Authorization recorded on <span className="bg-white px-2 py-0.5 rounded-full font-bold shadow-sm">{new Date(selectedApp.reviewed_at).toLocaleString()}</span>. 
+                    Authorization recorded on <span className="bg-white px-2 py-0.5 rounded-full font-bold shadow-sm">{selectedApp.reviewed_at ? new Date(selectedApp.reviewed_at).toLocaleString() : 'N/A'}</span>. 
                     Record is now immutable.
                   </p>
                 </div>

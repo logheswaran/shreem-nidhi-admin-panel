@@ -4,11 +4,22 @@
 
 :root {
   font-family: 'Plus Jakarta Sans', sans-serif;
+  
+  /* BRAND LIGHT MODE TOKENS */
+  --bg-page: #F7F5F0;
+  --bg-card: #FFFFFF;
+  --bg-inner: #F7F5F0;
+  --text-primary: #1A1A2E;
+  --text-secondary: #6B6458;
+  --status-warning: #BA7517;
+  --status-success: #1D9E75;
+  --status-danger: #E24B4A;
 }
 
 body {
-  @apply bg-brand-ivory text-brand-text min-h-screen;
-  transition: background-color 0.4s ease, color 0.4s ease;
+  @apply min-h-screen transition-colors duration-300;
+  background-color: var(--bg-page);
+  color: var(--text-primary);
 }
 
 .heritage-gradient {
@@ -28,101 +39,33 @@ body {
   font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24;
 }
 
-/* Custom scrollbar for premium feel */
+/* Custom scrollbar */
 ::-webkit-scrollbar {
   width: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  @apply bg-brand-ivory;
+  background-color: var(--bg-page);
 }
 
 ::-webkit-scrollbar-thumb {
   @apply bg-brand-gold/30 rounded-full hover:bg-brand-gold/50 transition-colors;
 }
 
-/* ====================== */
-/* LUXURY DARK MODE       */
-/* ====================== */
+/* Tailwind Overrides for Token Sync */
+.bg-white { background-color: var(--bg-card) !important; }
+.text-brand-navy { color: var(--text-primary) !important; }
+.text-on-surface-variant { color: var(--text-secondary) !important; }
+.border-brand-gold\/10 { border-color: rgba(186, 117, 23, 0.1) !important; }
 
-.dark body,
-.dark {
-  --dark-bg: #0F1219;
-  --dark-surface: #161B26;
-  --dark-card: #1C2233;
-  --dark-border: rgba(196, 154, 26, 0.12);
-  --dark-text: #E8E4DC;
-  --dark-text-muted: rgba(232, 228, 220, 0.5);
+/* Dashboard UI Consistency */
+.dashboard-card-custom {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
 }
 
-.dark body {
-  background-color: var(--dark-bg) !important;
-  color: var(--dark-text) !important;
-}
-
-/* Backgrounds */
-.dark .bg-brand-ivory,
-.dark .bg-surface-container { background-color: var(--dark-bg) !important; }
-
-.dark .bg-white,
-.dark .bg-white\/80,
-.dark .bg-white\/50,
-.dark .bg-white\/40 { background-color: var(--dark-card) !important; }
-
-.dark .bg-surface-container\/30,
-.dark .bg-surface-container\/20,
-.dark .bg-surface-container\/50 { background-color: rgba(28, 34, 51, 0.5) !important; }
-
-.dark .bg-brand-ivory\/50 { background-color: rgba(22, 27, 38, 0.5) !important; }
-
-/* Text */
-.dark .text-brand-navy { color: #E8E4DC !important; }
-.dark .text-brand-text { color: var(--dark-text) !important; }
-.dark .text-on-surface { color: var(--dark-text) !important; }
-.dark .text-on-surface-variant { color: var(--dark-text-muted) !important; }
-
-/* Borders */
-.dark .border-brand-gold\/10,
-.dark .border-brand-gold\/5,
-.dark .border-brand-gold\/20 { border-color: var(--dark-border) !important; }
-
-/* NavBar & Sidebar - special surfaces */
-.dark header.fixed { background-color: rgba(22, 27, 38, 0.9) !important; }
-.dark aside, .dark motion\.aside { background-color: var(--dark-surface) !important; }
-
-/* Cards and hover states */
-.dark .hover\:bg-brand-gold\/5:hover { background-color: rgba(196, 154, 26, 0.08) !important; }
-.dark .hover\:bg-white\/50:hover { background-color: rgba(28, 34, 51, 0.6) !important; }
-.dark .hover\:bg-brand-gold\/\[0\.02\]:hover { background-color: rgba(196, 154, 26, 0.06) !important; }
-
-/* Inputs */
-.dark input, .dark select {
-  background-color: var(--dark-card) !important;
-  color: var(--dark-text) !important;
-  border-color: var(--dark-border) !important;
-}
-
-.dark input::placeholder { color: var(--dark-text-muted) !important; }
-
-/* Scrollbar */
-.dark ::-webkit-scrollbar-track { background-color: var(--dark-bg) !important; }
-.dark ::-webkit-scrollbar-thumb { background-color: rgba(196, 154, 26, 0.2) !important; }
-
-/* Glass effect */
-.dark .glass-panel {
-  background: rgba(22, 27, 38, 0.8) !important;
-}
-
-/* Soft glow */
-.dark .soft-glow {
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.3) !important;
-}
-
-/* Toast override */
-.dark .heritage-toast {
-  background-color: var(--dark-card) !important;
-  color: var(--dark-text) !important;
-  border-color: var(--dark-border) !important;
+.inner-surface-custom {
+  background-color: var(--bg-inner);
 }
 
 /* No-scrollbar utility */

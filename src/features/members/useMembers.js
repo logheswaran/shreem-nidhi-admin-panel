@@ -1,105 +1,67 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { memberService } from './api'
 import toast from 'react-hot-toast'
 
 /**
- * Hook for managing member state with optimistic updates.
+ * Hook for managing member state with React Query for smart caching.
  */
 export const useMembers = () => {
-  const [members, setMembers] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const queryClient = useQueryClient()
 
-  const fetchMembers = useCallback(async () => {
-    try {
-      setLoading(true)
-      const data = await memberService.getMembers()
-      setMembers(data)
-      setError(null)
-    } catch (err) {
-      setError(err)
-      toast.error('Failed to fetch members directory')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // 1. DATA QUERY (WITH CACHING)
+  const { data: members = [], isLoading: loading, error } = useQuery({
+    queryKey: ['members'],
+    queryFn: memberService.getMembers,
+    staleTime: 1000 * 60 * 5, // 5 minutes cache freshness
+    cacheTime: 1000 * 60 * 30, // 30 minutes in RAM
+  })
 
-  useEffect(() => {
-    fetchMembers()
-  }, [fetchMembers])
-
-  /**
-   * Optimistically add a member
-   */
-  const addMember = async (payload) => {
-    const tempId = 'temp-' + Date.now()
-    // Create a mock record for optimistic UI
-    const optimistic = { 
-      id: tempId, 
-      ...payload,
-      profiles: { full_name: payload.full_name || 'Loading...', mobile_number: payload.mobile_number },
-      chits: { name: 'Assigning...' },
-      status: payload.status || 'active',
-      joined_at: new Date().toISOString()
-    }
-    
-    setMembers(prev => [optimistic, ...prev])
-    
-    try {
-      const real = await memberService.createMember(payload)
-      setMembers(prev => prev.map(m => m.id === tempId ? real : m))
+  // 2. ADD MEMBER MUTATION
+  const addMutation = useMutation({
+    mutationFn: memberService.createMember,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['members'] })
       toast.success('Member enrolled successfully')
-      return real
-    } catch (err) {
-      setMembers(prev => prev.filter(m => m.id !== tempId))
+    },
+    onError: (err) => {
+      console.error('Enrollment error:', err)
       toast.error('Failed to enroll member')
-      throw err
     }
-  }
+  })
 
-  /**
-   * Optimistically update a member
-   */
-  const editMember = async (id, updates) => {
-    const previousMembers = [...members]
-    setMembers(prev => prev.map(m => m.id === id ? { ...m, ...updates } : m))
-    
-    try {
-      const updated = await memberService.updateMember(id, updates)
-      setMembers(prev => prev.map(m => m.id === id ? updated : m))
+  // 3. EDIT MEMBER MUTATION
+  const editMutation = useMutation({
+    mutationFn: ({ id, updates }) => memberService.updateMember(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['members'] })
       toast.success('Member records updated')
-      return updated
-    } catch (err) {
-      setMembers(previousMembers)
-      toast.error('Failed to update member records')
-      throw err
+    },
+    onError: (err) => {
+      console.error('Update error:', err)
+      toast.error('Failed to update records')
     }
-  }
+  })
 
-  /**
-   * Optimistically remove a member
-   */
-  const removeMember = async (id) => {
-    const previousMembers = [...members]
-    setMembers(prev => prev.filter(m => m.id !== id))
-    
-    try {
-      await memberService.deleteMember(id)
+  // 4. REMOVE MEMBER MUTATION
+  const removeMutation = useMutation({
+    mutationFn: memberService.deleteMember,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['members'] })
       toast.success('Member removed from directory')
-    } catch (err) {
-      setMembers(previousMembers)
+    },
+    onError: (err) => {
+      console.error('Delete error:', err)
       toast.error('Failed to remove member')
-      throw err
     }
-  }
+  })
 
   return {
     members,
     loading,
     error,
-    addMember,
-    editMember,
-    removeMember,
-    refetch: fetchMembers
+    addMember: (payload) => addMutation.mutateAsync(payload),
+    editMember: (id, updates) => editMutation.mutateAsync({ id, updates }),
+    removeMember: (id) => removeMutation.mutateAsync(id),
+    refetch: () => queryClient.invalidateQueries({ queryKey: ['members'] })
   }
 }

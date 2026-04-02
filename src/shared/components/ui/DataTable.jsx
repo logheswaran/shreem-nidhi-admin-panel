@@ -1,6 +1,26 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, memo } from 'react'
 import { ChevronLeft, ChevronRight, Inbox, ArrowUpDown } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
+
+// MEMOIZED ROW COMPONENT (Optimizes rendering performance)
+const DataRow = memo(({ row, columns, rowIdx, onRowClick }) => (
+  <motion.tr 
+    initial={{ opacity: 0, y: 10 }}
+    animate={{ opacity: 1, y: 0 }}
+    exit={{ opacity: 0 }}
+    transition={{ duration: 0.3, delay: Math.min(rowIdx * 0.03, 0.3) }}
+    onClick={() => onRowClick && onRowClick(row)}
+    className={`transition-all duration-200 group border-b border-brand-gold/5 last:border-0 ${onRowClick ? 'cursor-pointer hover:bg-brand-gold/[0.02]' : ''}`}
+  >
+    {columns.map((col, colIdx) => (
+      <td key={colIdx} className="px-8 py-5 text-sm text-brand-text/80 group-hover:text-brand-navy">
+        {col.render ? col.render(row) : row[col.accessor]}
+      </td>
+    ))}
+  </motion.tr>
+))
+
+DataRow.displayName = 'DataRow'
 
 const DataTable = ({ columns, data = [], loading, onRowClick, pageSize = 10 }) => {
   const [currentPage, setCurrentPage] = useState(1)
@@ -75,27 +95,23 @@ const DataTable = ({ columns, data = [], loading, onRowClick, pageSize = 10 }) =
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-gold/5">
-              <AnimatePresence mode="wait">
+              <AnimatePresence mode="popLayout" initial={false}>
                 {paginatedData.length > 0 ? (
                   paginatedData.map((row, rowIdx) => (
-                    <motion.tr 
+                    <DataRow 
                       key={row.id || rowIdx}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ delay: rowIdx * 0.05 }}
-                      onClick={() => onRowClick && onRowClick(row)}
-                      className={`transition-all duration-200 group ${onRowClick ? 'cursor-pointer hover:bg-brand-gold/[0.02]' : ''}`}
-                    >
-                      {columns.map((col, colIdx) => (
-                        <td key={colIdx} className="px-8 py-5 text-sm text-brand-text/80 group-hover:text-brand-navy">
-                          {col.render ? col.render(row) : row[col.accessor]}
-                        </td>
-                      ))}
-                    </motion.tr>
+                      row={row}
+                      columns={columns}
+                      rowIdx={rowIdx}
+                      onRowClick={onRowClick}
+                    />
                   ))
                 ) : (
-                  <tr>
+                  <motion.tr
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                  >
                     <td colSpan={columns.length} className="px-8 py-24 text-center">
                       <div className="flex flex-col items-center opacity-30 grayscale contrast-75">
                         <Inbox className="w-16 h-16 text-brand-gold mb-6 stroke-[1]" />
@@ -103,7 +119,7 @@ const DataTable = ({ columns, data = [], loading, onRowClick, pageSize = 10 }) =
                         <p className="text-xs tracking-widest uppercase font-black mt-2">No relevant entries discovered</p>
                       </div>
                     </td>
-                  </tr>
+                  </motion.tr>
                 )}
               </AnimatePresence>
             </tbody>

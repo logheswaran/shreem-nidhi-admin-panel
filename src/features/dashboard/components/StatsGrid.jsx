@@ -1,13 +1,8 @@
 import React from 'react'
+import { useNavigate } from 'react-router-dom'
 import { Users, Coins, Wallet, ArrowUpRight } from 'lucide-react'
 import StatsCard from '../../../shared/components/ui/StatsCard'
-
-const formatCurrency = (amount) => {
-  if (amount >= 10000000) return `₹${(amount / 10000000).toFixed(2)} Cr`
-  if (amount >= 100000) return `₹${(amount / 100000).toFixed(2)} L`
-  if (amount >= 1000) return `₹${(amount / 1000).toFixed(2)} k`
-  return `₹${amount.toLocaleString()}`
-}
+import { formatCurrency } from '../utils/format'
 
 const StatsGridSkeleton = () => {
   return (
@@ -25,8 +20,8 @@ const StatsGridSkeleton = () => {
   )
 }
 
-const StatsGrid = ({ stats, isLoading, isError }) => {
-  if (isLoading) return <StatsGridSkeleton />
+const StatsGrid = ({ stats, isError }) => {
+  const navigate = useNavigate()
 
   if (isError) {
     return (
@@ -44,11 +39,13 @@ const StatsGrid = ({ stats, isLoading, isError }) => {
         title="Total Members" 
         value={(totalMembers || 0).toLocaleString()} 
         icon={Users} 
+        onClick={() => navigate('/members')}
       />
       <StatsCard 
         title="Active Chits" 
         value={(activeChits || 0).toString()} 
         icon={Coins} 
+        onClick={() => navigate('/chits')}
       />
       <StatsCard 
         title="Total Collection" 

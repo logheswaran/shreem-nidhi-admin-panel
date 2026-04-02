@@ -1,52 +1,26 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Rocket, IndianRupee, CheckCircle2, AlertCircle, History, Landmark, ShieldCheck } from 'lucide-react'
-import { financeService } from '../finance/api'
-import { chitService } from '../chits/api'
+import { usePayouts, useActiveChits } from '../finance/hooks'
 import DataTable from '../../shared/components/ui/DataTable'
 import StatusBadge from '../../shared/components/ui/StatusBadge'
 import Modal from '../../shared/components/ui/Modal'
-import toast from 'react-hot-toast'
 
 const Payouts = () => {
-  const [payouts, setPayouts] = useState([])
-  const [chits, setChits] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { data: payouts = [], isLoading: loading, processMaturity, isSettling } = usePayouts()
+  const { data: activeChits = [] } = useActiveChits()
+  
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedChit, setSelectedChit] = useState(null)
-  const [processing, setProcessing] = useState(false)
 
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-      const [payoutData, chitData] = await Promise.all([
-        financeService.getMaturityPayouts(),
-        chitService.getChits()
-      ])
-      setPayouts(payoutData)
-      setChits(chitData.filter(c => c.status === 'active' && c.current_month === c.total_months))
-    } catch (error) {
-      toast.error('Failed to load settlement registry')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => {
-    fetchData()
-  }, [])
+  // Filter for chits that have reached their final month
+  const chitsAwaitingMaturity = activeChits.filter(c => c.current_month === c.total_months)
 
   const handleProcessMaturity = async () => {
-    setProcessing(true)
     try {
-      toast.loading('Orchestrating final settlement...', { id: 'mat' })
-      await financeService.processMaturity(selectedChit.id)
-      toast.success('Maturity processed! Ledger updated and scheme closed.', { id: 'mat' })
+      await processMaturity(selectedChit.id)
       setIsModalOpen(false)
-      fetchData()
     } catch (error) {
-      toast.error(error.message || 'Settlement failed', { id: 'mat' })
-    } finally {
-      setProcessing(false)
+      // toast handled in hook
     }
   }
 
@@ -91,7 +65,7 @@ const Payouts = () => {
           <h2 className="text-4xl font-headline font-bold text-brand-navy">Maturity Settlements</h2>
           <p className="text-on-surface-variant font-body mt-2 opacity-70">Execute final capital distribution for concluded trust cycles.</p>
         </div>
-        {chits.length > 0 && (
+        {chitsAwaitingMaturity.length > 0 && (
           <button 
             onClick={() => setIsModalOpen(true)}
             className="heritage-gradient text-white px-10 py-4 rounded-full text-xs font-black uppercase tracking-[0.2em] shadow-2xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center gap-3"
@@ -103,17 +77,17 @@ const Payouts = () => {
       </header>
 
       {/* Settlement Alert */}
-      {chits.length > 0 && (
+      {chitsAwaitingMaturity.length > 0 && (
         <div className="mb-10 bg-brand-gold/5 border-l-4 border-brand-gold p-8 rounded-r-[3rem] shadow-sm flex flex-col md:flex-row gap-8 items-center animate-in slide-in-from-top-4 duration-700">
            <div className="w-16 h-16 bg-white rounded-[1.5rem] flex items-center justify-center shadow-md shrink-0">
              <AlertCircle className="text-brand-gold w-8 h-8" />
            </div>
            <div className="flex-1">
              <h4 className="font-headline font-bold text-xl text-brand-navy">Concluded Cycles Detected</h4>
-             <p className="text-sm text-brand-text/60 mt-1 leading-relaxed">There are <span className="font-bold text-brand-navy">{chits.length} scheme(s)</span> awaiting final maturity processing. This will auto-settle any remaining loans, calculate interest, and generate payout records.</p>
+             <p className="text-sm text-brand-text/60 mt-1 leading-relaxed">There are <span className="font-bold text-brand-navy">{chitsAwaitingMaturity.length} scheme(s)</span> awaiting final maturity processing. This will auto-settle any remaining loans, calculate interest, and generate payout records.</p>
            </div>
            <button 
-             onClick={() => { setSelectedChit(chits[0]); setIsModalOpen(true); }}
+             onClick={() => { setSelectedChit(chitsAwaitingMaturity[0]); setIsModalOpen(true); }}
              className="px-8 py-3 bg-brand-navy text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-brand-navy-light transition-all shadow-xl shrink-0"
            >
              Handle Settlement
@@ -162,11 +136,11 @@ const Payouts = () => {
                </div>
 
                <button 
-                 disabled={processing}
+                 disabled={isSettling}
                  onClick={handleProcessMaturity}
                  className="w-full heritage-gradient text-white py-6 rounded-full font-bold text-xs uppercase tracking-[0.3em] shadow-2xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-4 mt-2"
                >
-                 {processing ? (
+                 {isSettling ? (
                    <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
                  ) : (
                    <>
