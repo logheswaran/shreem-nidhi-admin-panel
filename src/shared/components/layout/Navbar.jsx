@@ -1,16 +1,14 @@
 import React from 'react'
-import { Search, Bell, Settings, PlusCircle, Menu, Sun, Moon } from 'lucide-react'
+import { Search, Bell, Settings, PlusCircle, Menu } from 'lucide-react'
 import { useAuth } from '../../../core/providers/AuthProvider'
-import { useTheme } from '../../../core/providers/ThemeProvider'
 import { useNavigate } from 'react-router-dom'
 
 const Navbar = ({ onMenuClick, onSearchClick, onNewActionClick }) => {
   const { profile } = useAuth()
-  const { isDark, toggleTheme } = useTheme()
   const navigate = useNavigate()
 
   return (
-    <header className="fixed top-0 right-0 w-full lg:w-[calc(100%-16rem)] h-16 z-40 bg-white/80 backdrop-blur-md border-b border-brand-gold/10 flex items-center justify-between px-4 md:px-8">
+    <header className="fixed top-0 right-0 w-full lg:w-[calc(100%-16rem)] h-16 z-40 bg-white/80 backdrop-blur-md border-b border-brand-gold/10 flex items-center justify-between px-4 md:px-8 transition-colors duration-300">
       <div className="flex items-center gap-4">
         {/* Mobile Menu Toggle */}
         <button 
@@ -23,15 +21,15 @@ const Navbar = ({ onMenuClick, onSearchClick, onNewActionClick }) => {
         {/* Global Search Trigger (Ctrl+K) */}
         <button 
           onClick={onSearchClick}
-          className="hidden md:flex items-center justify-between bg-surface-container/50 px-4 py-2 rounded-full w-96 border border-brand-gold/5 hover:border-brand-gold/30 hover:bg-surface-container transition-all group"
+          className="hidden md:flex items-center justify-between bg-[rgba(25,25,46,0.02)] px-4 py-2 rounded-full w-96 border border-brand-gold/5 hover:border-brand-gold/30 hover:bg-[rgba(25,25,46,0.05)] transition-all group"
         >
           <div className="flex items-center gap-2">
-            <Search className="text-brand-text/40 w-4 h-4 group-hover:text-brand-gold transition-colors" />
-            <span className="text-sm font-body text-brand-text/40 group-hover:text-brand-navy transition-colors">
+            <Search className="text-[#6B6458] w-4 h-4 group-hover:text-brand-gold transition-colors opacity-40" />
+            <span className="text-sm font-body text-[#6B6458] group-hover:text-[#1A1A2E] transition-colors opacity-40">
               Search registry or jump to...
             </span>
           </div>
-          <kbd className="hidden lg:inline-block px-2 text-[10px] font-bold font-mono text-brand-text/30 bg-white border border-brand-gold/10 rounded-md shadow-sm">
+          <kbd className="hidden lg:inline-block px-2 text-[10px] font-bold font-mono text-[#6B6458] bg-white border border-brand-gold/10 rounded-md shadow-sm opacity-30">
             Ctrl + K
           </kbd>
         </button>
@@ -41,27 +39,17 @@ const Navbar = ({ onMenuClick, onSearchClick, onNewActionClick }) => {
       <div className="flex items-center gap-2 md:gap-4">
         <button 
           onClick={() => navigate('/notifications')}
-          className="relative text-brand-text/60 hover:text-brand-gold transition-colors p-2 rounded-full hover:bg-brand-gold/5"
+          className="relative text-[#6B6458] hover:text-brand-gold transition-colors p-2 rounded-full hover:bg-brand-gold/5"
         >
           <Bell className="w-5 h-5" />
           <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full border-2 border-white"></span>
         </button>
         
-        {/* Dark Mode Toggle */}
-        <button 
-          onClick={toggleTheme}
-          className="relative p-2 rounded-full hover:bg-brand-gold/5 transition-all"
-          title={isDark ? 'Switch to Light Mode' : 'Switch to Dark Mode'}
-        >
-          <div className="relative w-5 h-5">
-            <Sun className={`w-5 h-5 absolute inset-0 text-brand-gold transition-all duration-300 ${isDark ? 'opacity-0 rotate-90 scale-0' : 'opacity-100 rotate-0 scale-100'}`} />
-            <Moon className={`w-5 h-5 absolute inset-0 text-brand-gold transition-all duration-300 ${isDark ? 'opacity-100 rotate-0 scale-100' : 'opacity-0 -rotate-90 scale-0'}`} />
-          </div>
-        </button>
+        {/* Dark Mode Toggle Removed as per request */}
 
         <button 
           onClick={() => navigate('/profile')}
-          className="hidden sm:block text-brand-text/60 hover:text-brand-gold transition-colors p-2 rounded-full hover:bg-brand-gold/5"
+          className="hidden sm:block text-[#6B6458] hover:text-brand-gold transition-colors p-2 rounded-full hover:bg-brand-gold/5"
         >
           <Settings className="w-5 h-5" />
         </button>

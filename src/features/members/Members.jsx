@@ -1,18 +1,16 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { 
-  Search, 
   Plus, 
-  Filter, 
   Download, 
-  MoreVertical, 
   Eye, 
   Pencil, 
   Trash2, 
   ChevronRight,
   TrendingUp,
-  Users,
-  AlertCircle
+  Users as UsersIcon,
+  Search,
+  Wallet
 } from 'lucide-react'
 import { useMembers } from './useMembers'
 import { useDebounce } from '../../shared/hooks/useDebounce'
@@ -27,14 +25,13 @@ import toast from 'react-hot-toast'
 
 const Members = () => {
   const navigate = useNavigate()
-  const { user, isAdmin } = useAuth()
+  const { isAdmin } = useAuth()
   const { members, loading, addMember, editMember, removeMember } = useMembers()
   const searchRef = useRef(null)
 
   // UI State
   const [searchTerm, setSearchTerm] = useState('')
-  const [activeTab, setActiveTab] = useState('all')
-  const [sortOrder, setSortOrder] = useState('newest')
+  const [activeTab, setActiveTab] = useState('All members') // Using name as key
   const [selectedMember, setSelectedMember] = useState(null)
   const [editingMember, setEditingMember] = useState(null)
   const [showAddModal, setShowAddModal] = useState(false)
@@ -43,21 +40,13 @@ const Members = () => {
 
   const debouncedSearch = useDebounce(searchTerm, 300)
 
-  // Keyboard Shortcuts
-  useEffect(() => {
-    const handler = (e) => {
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
-        e.preventDefault()
-        searchRef.current?.focus()
-      }
-      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
-        e.preventDefault()
-        setShowAddModal(true)
-      }
-    }
-    document.addEventListener('keydown', handler)
-    return () => document.removeEventListener('keydown', handler)
-  }, [])
+  // DYNAMIC TAB GENERATION
+  const dynamicTabs = useMemo(() => {
+    const chitNames = members
+      .map(m => m.chits?.name)
+      .filter(name => name && name !== 'Unassigned')
+    return ['All members', ...new Set(chitNames)]
+  }, [members])
 
   // Filter & Sort Logic
   const processedMembers = useMemo(() => {
@@ -73,142 +62,115 @@ const Members = () => {
       )
     }
 
-    // Tab Filter
-    if (activeTab === 'active') {
-      result = result.filter(m => m.status === 'active')
-    } else if (activeTab === 'defaulters') {
-      result = result.filter(m => m.status === 'defaulter')
+    // Tab Filter (by Chit Name)
+    if (activeTab !== 'All members') {
+      result = result.filter(m => m.chits?.name === activeTab)
     }
-
-    // Sort Logic
-    result.sort((a, b) => {
-      if (sortOrder === 'newest') return new Date(b.created_at) - new Date(a.created_at)
-      if (sortOrder === 'oldest') return new Date(a.created_at) - new Date(b.created_at)
-      if (sortOrder === 'contribution') {
-        const amtA = a.chits?.amount || 0
-        const amtB = b.chits?.amount || 0
-        return amtB - amtA
-      }
-      return 0
-    })
 
     return result
-  }, [members, debouncedSearch, activeTab, sortOrder])
+  }, [members, debouncedSearch, activeTab])
 
-  const stats = useMemo(() => ({
-    total: members.length,
-    active: members.filter(m => m.status === 'active').length,
-    defaulters: members.filter(m => m.status === 'defaulter').length
-  }), [members])
+  // STATS CALCULATION
+  const stats = useMemo(() => {
+    if (activeTab === 'All members') {
+      const uniqueChits = new Set(members.map(m => m.chits?.name).filter(Boolean)).size
+      return {
+        col1: { label: 'Total Enrollment', value: members.length },
+        col2: { label: 'Active Standings', value: members.filter(m => m.status === 'active').length },
+        col3: { label: 'Diversity Index', value: `${uniqueChits} Active Chits` }
+      }
+    } else {
+      const chitMembers = members.filter(m => m.chits?.name === activeTab)
+      const chitValue = chitMembers[0]?.chits?.monthly_amount || 0
+      return {
+        col1: { label: 'Members in Cluster', value: chitMembers.length },
+        col2: { label: 'Active Participation', value: chitMembers.filter(m => m.status === 'active').length },
+        col3: { label: 'Certificate Value', value: `₹${Number(chitValue).toLocaleString()}` }
+      }
+    }
+  }, [members, activeTab])
 
-  const columns = [
-    {
-      header: 'Member Identity',
-      render: (row) => (
-        <div className="flex items-center gap-4">
-          <div className="w-10 h-10 rounded-full heritage-gradient flex items-center justify-center text-white font-black text-sm shadow-sm">
-            {row.profiles?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
+  const columns = useMemo(() => {
+    const baseColumns = [
+      {
+        header: 'Member Identity',
+        render: (row) => (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded-full bg-[#FAEEDA] flex items-center justify-center text-[#633806] font-bold text-xs shadow-sm">
+              {row.profiles?.full_name?.split(' ').map(n => n[0]).join('').slice(0, 2).toUpperCase() || '?'}
+            </div>
+            <div>
+              <p className="font-bold text-brand-navy leading-none mb-0.5">{row.profiles?.full_name || 'Anonymous'}</p>
+              <p className="text-[9px] font-black uppercase tracking-widest text-brand-text/30">ID: {row.id.slice(0, 8).toUpperCase()}</p>
+            </div>
           </div>
+        )
+      },
+      {
+        header: 'Secure Contact',
+        render: (row) => (
+          <div className="flex flex-col">
+            <span className="text-[11px] font-bold text-brand-text/60">{row.profiles?.mobile_number}</span>
+            <span className="text-[10px] text-brand-text/30 truncate max-w-[150px]">{row.profiles?.email || 'no-email@sreemnidhi.com'}</span>
+          </div>
+        )
+      }
+    ]
+
+    // Only add Heritage Portfolio if we are in "All members" tab
+    if (activeTab === 'All members') {
+      baseColumns.push({
+        header: 'Heritage Portfolio',
+        render: (row) => (
           <div>
-            <p className="font-bold text-brand-navy leading-none mb-1">{row.profiles?.full_name || 'Anonymous'}</p>
-            <p className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">ID: {row.id.slice(0, 8).toUpperCase()}</p>
+            <span className="text-[11px] font-bold text-brand-navy block lowercase">{row.chits?.name || 'Unassigned'}</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#BA7517]/60">
+              {row.chits?.monthly_amount ? `₹${Number(row.chits.monthly_amount).toLocaleString()}` : '--'}
+            </span>
           </div>
-        </div>
-      )
-    },
-    {
-      header: 'Secure Contact',
-      render: (row) => (
-        <div className="flex flex-col">
-          <span className="text-xs font-bold text-brand-text/60">{row.profiles?.mobile_number}</span>
-          <span className="text-[10px] text-brand-text/30 truncate max-w-[150px]">{row.profiles?.email || 'no-email@sreemnidhi.com'}</span>
-        </div>
-      )
-    },
-    {
-      header: 'Heritage Portfolio',
-      render: (row) => (
-        <div>
-          <span className="text-xs font-bold text-brand-navy block lowercase">{row.chits?.name || 'Unassigned'}</span>
-          <span className="text-[10px] font-black uppercase tracking-widest text-brand-gold/60">
-            {row.chits?.amount ? `₹${Number(row.chits.amount).toLocaleString()}` : '--'}
-          </span>
-        </div>
-      )
-    },
-    { 
-      header: 'Standing', 
-      render: (row) => <StatusBadge status={row.status} /> 
-    },
-    {
-      header: 'Actions',
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={() => setSelectedMember(row)}
-            className="p-2 hover:bg-brand-gold/10 text-brand-gold transition-colors rounded-lg"
-            title="Quick View"
-          >
-            <Eye className="w-4 h-4" />
-          </button>
-          <button 
-            onClick={() => setEditingMember(row)}
-            className="p-2 hover:bg-brand-gold/10 text-brand-gold transition-colors rounded-lg"
-            title="Edit Record"
-          >
-            <Pencil className="w-4 h-4" />
-          </button>
-          {isAdmin && (
-            <button 
-              onClick={() => {
-                setDeleteTargetId(row.id)
-                setShowDeleteConfirm(true)
-              }}
-              className="p-2 hover:bg-red-50 text-red-500 transition-colors rounded-lg"
-              title="Remove Member"
-            >
-              <Trash2 className="w-4 h-4" />
-            </button>
-          )}
-          <button 
-            onClick={() => navigate(`/members/${row.id}`)}
-            className="p-2 hover:bg-brand-gold/10 text-brand-navy transition-colors rounded-lg"
-            title="Full Profile"
-          >
-            <ChevronRight className="w-4 h-4" />
-          </button>
-        </div>
-      )
+        )
+      })
     }
-  ]
 
-  const handleCreateMember = async (data) => {
-    try {
-      await addMember(data)
-      setShowAddModal(false)
-    } catch (err) {
-      // Error handled in hook
-    }
-  }
+    baseColumns.push(
+      { 
+        header: 'Standing', 
+        render: (row) => {
+          const statusMap = {
+            'active': { label: 'Active', bg: 'bg-[#E1F5EE]', text: 'text-[#085041]' },
+            'won': { label: 'Won', bg: 'bg-[#FAEEDA]', text: 'text-[#633806]' },
+            'matured': { label: 'Matured', bg: 'bg-[#E6F1FB]', text: 'text-[#0C447C]' }
+          }
+          const s = statusMap[row.status] || { label: row.status, bg: 'bg-gray-50', text: 'text-gray-600' }
+          return (
+            <span className={`px-3 py-1 rounded-full text-[9px] font-black tracking-[0.1em] uppercase ${s.bg} ${s.text}`}>
+              {s.label}
+            </span>
+          )
+        }
+      },
+      {
+        header: 'Actions',
+        render: (row) => (
+          <div className="flex items-center gap-1">
+            <button onClick={() => setSelectedMember(row)} className="p-1.5 hover:bg-[#FAEEDA]/50 text-[#BA7517] transition-all rounded-lg"><Eye className="w-4 h-4" /></button>
+            <button onClick={() => setEditingMember(row)} className="p-1.5 hover:bg-[#FAEEDA]/50 text-[#BA7517] transition-all rounded-lg"><Pencil className="w-4 h-4" /></button>
+            {isAdmin && (
+              <button 
+                onClick={() => { setDeleteTargetId(row.id); setShowDeleteConfirm(true); }}
+                className="p-1.5 hover:bg-red-50 text-red-500 transition-all rounded-lg"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+            <button onClick={() => navigate(`/members/${row.id}`)} className="p-1.5 hover:bg-gray-50 text-gray-400 transition-all rounded-lg ml-1"><ChevronRight className="w-4 h-4" /></button>
+          </div>
+        )
+      }
+    )
 
-  const handleUpdateMember = async (data) => {
-    try {
-      await editMember(editingMember.id, data)
-      setEditingMember(null)
-    } catch (err) {
-      // Error handled in hook
-    }
-  }
-
-  const handleDeleteMember = async () => {
-    try {
-      await removeMember(deleteTargetId)
-      setShowDeleteConfirm(false)
-      setDeleteTargetId(null)
-    } catch (err) {
-      // Error handled in hook
-    }
-  }
+    return baseColumns
+  }, [activeTab, isAdmin, navigate])
 
   const handleExport = () => {
     const exportCols = [
@@ -225,144 +187,93 @@ const Members = () => {
       'profiles.email': m.profiles?.email,
       'chits.name': m.chits?.name || 'Unassigned'
     }))
-    exportToCSV(data, exportCols, 'SreemNidhi_Members_Registry')
+    exportToCSV(data, exportCols, `SreemNidhi_${activeTab}_Registry`)
     toast.success('Registry exported as CSV')
   }
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-700">
-      {/* Header Section */}
       <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <div className="flex items-center gap-3 mb-2">
-            <span className="px-3 py-1 bg-brand-gold/10 text-brand-goldDark text-[8px] font-black uppercase tracking-[0.2em] rounded-full">Secure Registry</span>
-          </div>
           <h2 className="text-4xl font-headline font-bold text-brand-navy">Members Directory</h2>
-          <p className="text-on-surface-variant font-body mt-2 opacity-70">Unified management portal for all trust beneficiaries.</p>
+          <p className="text-on-surface-variant font-body mt-2 opacity-70">Secured segregation and portfolio audit interface.</p>
         </div>
         <div className="flex gap-4">
-          <button 
-            onClick={handleExport}
-            className="px-6 py-3 bg-white text-brand-navy text-[10px] font-black uppercase tracking-widest rounded-full flex items-center gap-3 border border-brand-gold/10 hover:bg-brand-gold/5 transition-all shadow-sm active:scale-95"
-          >
+          <button onClick={handleExport} className="px-6 py-3 bg-white text-brand-navy text-[10px] font-black uppercase tracking-widest rounded-full flex items-center gap-3 border border-brand-gold/10 hover:bg-brand-gold/5 transition-all shadow-sm active:scale-95">
             <Download className="w-4 h-4" /> Export Registry
           </button>
-          <button 
-            onClick={() => setShowAddModal(true)}
-            className="heritage-gradient px-8 py-3 text-white text-[10px] font-black uppercase tracking-widest rounded-full flex items-center gap-3 shadow-xl hover:brightness-110 transition-all active:scale-95"
-          >
+          <button onClick={() => setShowAddModal(true)} className="heritage-gradient px-8 py-3 text-white text-[10px] font-black uppercase tracking-widest rounded-full flex items-center gap-3 shadow-xl hover:brightness-110 transition-all active:scale-95">
             <Plus className="w-4 h-4" /> Enroll New Member
           </button>
         </div>
       </header>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        {[
-          { label: 'Total Enrollment', value: stats.total, icon: Users, color: 'brand-gold' },
-          { label: 'Active Standings', value: stats.active, icon: TrendingUp, color: 'green-600' },
-          { label: 'Pending Arrears', value: stats.defaulters, icon: AlertCircle, color: 'red-500' }
-        ].map((stat, idx) => (
-          <div key={idx} className="bg-white/40 backdrop-blur-md p-6 rounded-[2rem] border border-brand-gold/5 flex items-center justify-between shadow-sm group hover:border-brand-gold/20 transition-all">
-            <div>
-              <p className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 mb-1">{stat.label}</p>
-              <p className="text-3xl font-headline font-bold text-brand-navy">{stat.value}</p>
-            </div>
-            <div className={`p-4 rounded-2xl bg-white shadow-inner group-hover:scale-110 transition-transform`}>
-              <stat.icon className={`w-6 h-6 text-${stat.color}`} />
-            </div>
-          </div>
-        ))}
+      {/* SEARCH (Now elevated above the card) */}
+      <div className="mb-8 relative group max-w-xl">
+        <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-text/20 group-focus-within:text-[#BA7517] transition-colors w-4 h-4" />
+        <input 
+          ref={searchRef}
+          className="w-full bg-white/50 backdrop-blur-sm border-2 border-brand-gold/5 focus:border-[#BA7517]/30 rounded-2xl py-4 pl-12 pr-6 text-sm font-body focus:ring-0 focus:outline-none transition-all placeholder:text-brand-text/20 shadow-sm"
+          placeholder="Global Registry Audit (Ctrl+K)..."
+          type="text"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
       </div>
 
-      {/* Filters & Search */}
-      <div className="mb-8 flex flex-col md:flex-row gap-6 items-center justify-between">
-        {/* Tabs */}
-        <div className="p-1 bg-brand-ivory rounded-2xl flex gap-1 self-start md:self-auto">
-          {['all', 'active', 'defaulters'].map((tab) => (
+      {/* Main Segregation Card */}
+      <div className="bg-white border-[0.5px] border-brand-gold/20 rounded-[12px] shadow-sm overflow-hidden flex flex-col">
+        {/* TAB BAR */}
+        <div className="px-6 flex border-b border-brand-gold/10 overflow-x-auto no-scrollbar bg-gray-50/10">
+          {dynamicTabs.map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
-              className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+              className={`px-6 py-5 text-[11px] font-black uppercase tracking-widest transition-all relative whitespace-nowrap flex items-center gap-3 ${
                 activeTab === tab 
-                  ? 'bg-white text-brand-navy shadow-sm' 
-                  : 'text-brand-text/40 hover:text-brand-navy'
+                  ? 'text-[#BA7517]' 
+                  : 'text-brand-text/30 hover:text-brand-navy'
               }`}
             >
               {tab}
+              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                activeTab === tab ? 'bg-[#FAEEDA] text-[#633806]' : 'bg-gray-100 text-gray-400'
+              }`}>
+                {tab === 'All members' ? members.length : members.filter(m => m.chits?.name === tab).length}
+              </span>
+              {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-[2px] bg-[#BA7517]"></div>}
             </button>
           ))}
         </div>
 
-        <div className="flex flex-col md:flex-row gap-4 flex-1 justify-end w-full">
-          {/* Search */}
-          <div className="relative group flex-1 max-w-md">
-            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-text/20 group-focus-within:text-brand-gold transition-colors w-4 h-4" />
-            <input 
-              ref={searchRef}
-              className="w-full bg-white border-2 border-brand-gold/5 focus:border-brand-gold/30 rounded-2xl py-3 pl-12 pr-6 text-sm font-body focus:ring-0 focus:outline-none transition-all placeholder:text-brand-text/20 shadow-sm"
-              placeholder="Search (Ctrl+K)..."
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
+        {/* STATS BAR (Inside Card) */}
+        <div className="grid grid-cols-3 gap-0 p-1 border-b border-brand-gold/10">
+           {[stats.col1, stats.col2, stats.col3].map((s, idx) => (
+             <div key={idx} className={`p-8 hover:bg-gray-50/50 transition-all bg-transparent ${idx < 2 ? 'border-r border-brand-gold/5' : ''}`}>
+                <p className="text-[11px] font-black uppercase tracking-widest text-brand-text/30 mb-2">{s.label}</p>
+                <p className="text-xl font-headline font-medium text-brand-navy">{s.value}</p>
+             </div>
+           ))}
+        </div>
 
-          {/* Sort */}
-          <select 
-            value={sortOrder}
-            onChange={(e) => setSortOrder(e.target.value)}
-            className="bg-white border-2 border-brand-gold/5 rounded-2xl px-6 py-3 text-[10px] font-black uppercase tracking-widest text-brand-navy focus:outline-none focus:border-brand-gold/30 shadow-sm transition-all cursor-pointer"
-          >
-            <option value="newest">Sort: Newest First</option>
-            <option value="oldest">Sort: Oldest First</option>
-            <option value="contribution">Sort: High Contribution</option>
-          </select>
+        {/* TABLE SECTION */}
+        <div className="p-0">
+          <DataTable 
+            columns={columns} 
+            data={processedMembers} 
+            loading={loading} 
+            onRowClick={(row) => setSelectedMember(row)}
+            // Custom CSS for table row hover states as requested
+            rowClassName="hover:bg-gray-50 cursor-pointer transition-all"
+          />
         </div>
       </div>
 
-      {/* Main Table */}
-      <div className="soft-glow bg-white/20 rounded-[2.5rem] border border-brand-gold/5 overflow-hidden">
-        <DataTable 
-          columns={columns} 
-          data={processedMembers} 
-          loading={loading} 
-          onRowClick={(row) => setSelectedMember(row)}
-        />
-      </div>
-
       {/* Modals */}
-      <MemberFormModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onSubmit={handleCreateMember}
-      />
-
-      <MemberFormModal
-        isOpen={!!editingMember}
-        onClose={() => setEditingMember(null)}
-        onSubmit={handleUpdateMember}
-        initialData={editingMember}
-      />
-
-      <MemberQuickViewModal
-        isOpen={!!selectedMember}
-        onClose={() => setSelectedMember(null)}
-        member={selectedMember}
-        onViewFull={(id) => {
-          setSelectedMember(null)
-          navigate(`/members/${id}`)
-        }}
-      />
-
-      <ConfirmDialog
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={handleDeleteMember}
-        title="Remove Member Permanently?"
-        description="This will terminate the digital enrollment of this member across all heritage portfolios. This action is immutable."
-        intent="danger"
-      />
+      <MemberFormModal isOpen={showAddModal} onClose={() => setShowAddModal(false)} onSubmit={addMember} />
+      <MemberFormModal isOpen={!!editingMember} onClose={() => setEditingMember(null)} onSubmit={(data) => editMember(editingMember.id, data)} initialData={editingMember} />
+      <MemberQuickViewModal isOpen={!!selectedMember} onClose={() => setSelectedMember(null)} member={selectedMember} onViewFull={(id) => { setSelectedMember(null); navigate(`/members/${id}`) }} />
+      <ConfirmDialog isOpen={showDeleteConfirm} onClose={() => setShowDeleteConfirm(false)} onConfirm={() => removeMember(deleteTargetId).then(() => setShowDeleteConfirm(false))} title="Remove Member Permanently?" description="This action is immutable and will terminate the beneficiary record." intent="danger" />
     </div>
   )
 }

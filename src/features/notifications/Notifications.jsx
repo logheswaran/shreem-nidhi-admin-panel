@@ -1,12 +1,13 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { Bell, Send, Users, Search, Filter, Mail, Phone, MessageSquare, Info, Smartphone, CheckCircle2 } from 'lucide-react'
+import { useNotifications, useNotificationActions } from './hooks'
 import DataTable from '../../shared/components/ui/DataTable'
 import Modal from '../../shared/components/ui/Modal'
-import toast from 'react-hot-toast'
 
 const Notifications = () => {
-  const [notifications, setNotifications] = useState([])
-  const [loading, setLoading] = useState(true)
+  const { data: notifications = [], isLoading: loading } = useNotifications()
+  const { mutateAsync: sendBroadcast, isLoading: processing } = useNotificationActions()
+  
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [newNotification, setNewNotification] = useState({
     title: '',
@@ -15,20 +16,15 @@ const Notifications = () => {
     channel: 'app'
   })
 
-  useEffect(() => {
-    // Mocking for now since no backend table yet shown in schema for broadcast history
-    setNotifications([
-      { id: 1, title: 'Month 5 Generation', message: 'Contributions for Month 5 are now open for Platinum 5L.', target: 'Platinum 5L Members', status: 'delivered', created_at: new Date() },
-      { id: 2, title: 'Loan Disbursement', message: 'Your credit request for ₹50,000 has been approved.', target: 'Member: Logheswaran', status: 'delivered', created_at: new Date() }
-    ])
-    setLoading(false)
-  }, [])
-
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault()
-    toast.success('Broadcast transmitted successfully!')
-    setIsModalOpen(false)
-    setNewNotification({ title: '', message: '', target: 'all', channel: 'app' })
+    try {
+      await sendBroadcast(newNotification)
+      setIsModalOpen(false)
+      setNewNotification({ title: '', message: '', target: 'all', channel: 'app' })
+    } catch (err) {
+      // toast handled in hook
+    }
   }
 
   const columns = [
@@ -171,10 +167,17 @@ const Notifications = () => {
 
               <button 
                 type="submit"
+                disabled={processing}
                 className="w-full heritage-gradient text-white py-6 rounded-full font-bold text-xs uppercase tracking-[0.3em] shadow-2xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-4 mt-2"
               >
-                Transmit Broadcast
-                <Send className="w-5 h-5" />
+                {processing ? (
+                  <div className="w-6 h-6 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    Transmit Broadcast
+                    <Send className="w-5 h-5" />
+                  </>
+                )}
               </button>
            </div>
         </form>

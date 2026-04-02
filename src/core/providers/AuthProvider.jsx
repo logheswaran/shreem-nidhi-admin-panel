@@ -61,7 +61,7 @@ export const AuthProvider = ({ children }) => {
     const isDemo = localStorage.getItem('sreem_nidhi_demo') === 'true'
     const isPro = localStorage.getItem('sreem_nidhi_pro_mode') === 'true'
     
-    if (isDemo || isPro) {
+    if ((isDemo || isPro) && !user) {
       setUser({ id: isPro ? 'pro-admin' : 'demo-user', email: isPro ? 'admin@sreemnidhi.com' : 'demo@sreemnidhi.com' })
       setProfile({ 
         full_name: isPro ? 'System Administrator' : 'Heritage Demo Admin', 
@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }) => {
         setUser(fullUser)
         setProfile(fullUser?.profile)
         resetTimeout()
-      } else {
+      } else if (!isDemo && !isPro) {
         setUser(null)
         setProfile(null)
         if (timeoutRef.current) clearTimeout(timeoutRef.current)
@@ -91,7 +91,7 @@ export const AuthProvider = ({ children }) => {
       })
       if (timeoutRef.current) clearTimeout(timeoutRef.current)
     }
-  }, [user])
+  }, [user?.id]) // Using user.id instead of the whole object to stabilize dependency tracking
 
   const signOut = async () => {
     localStorage.removeItem('sreem_nidhi_demo')

@@ -21,9 +21,6 @@ const LedgerTable = ({ ledgerData, isLoading }) => {
         'Status': record.status
       }))
 
-      // Standard CSV export pattern if exportUtils doesn't have a direct default export
-      // Assuming exportCSV might be an object, or just a function
-      // If it fails, we fall back to manual export
       const headers = Object.keys(csvData[0]).join(',')
       const rows = csvData.map(obj => 
         Object.values(obj).map(v => `"${String(v).replace(/"/g, '""')}"`).join(',')
@@ -48,11 +45,11 @@ const LedgerTable = ({ ledgerData, isLoading }) => {
       header: 'Txn ID', 
       render: (row) => (
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-full bg-brand-navy/5 flex items-center justify-center">
-            <FileText className="w-4 h-4 text-brand-navy/50" />
+          <div className="w-10 h-10 rounded-full bg-[rgba(25,25,46,0.05)] flex items-center justify-center">
+            <FileText className="w-4 h-4 text-[var(--text-secondary)] opacity-50" />
           </div>
           <div>
-            <p className="font-headline font-bold text-brand-navy">{row.id.substring(0, 8).toUpperCase()}</p>
+            <p className="font-headline font-bold text-[var(--text-primary)]">{row.id.substring(0, 8).toUpperCase()}</p>
           </div>
         </div>
       )
@@ -66,7 +63,7 @@ const LedgerTable = ({ ledgerData, isLoading }) => {
           }`}>
             {row.transaction_type}
           </span>
-          <p className="text-[10px] text-brand-text/50 font-bold uppercase tracking-widest mt-2">{row.reference_type}</p>
+          <p className="text-[10px] text-[var(--text-secondary)] font-bold uppercase tracking-widest mt-2">{row.reference_type}</p>
         </div>
       )
     },
@@ -81,22 +78,22 @@ const LedgerTable = ({ ledgerData, isLoading }) => {
     { 
       header: 'Date', 
       render: (row) => (
-        <span className="text-xs font-bold text-brand-text/70">{format(new Date(row.created_at), 'dd MMM yy')}</span>
+        <span className="text-xs font-bold text-[var(--text-secondary)] opacity-70">{format(new Date(row.created_at), 'dd MMM yy')}</span>
       ) 
     },
     { header: 'Status', render: (row) => <StatusBadge status={row.status} /> }
   ]
 
   return (
-    <div className="bg-white rounded-[2.5rem] border border-brand-gold/10 overflow-hidden shadow-sm">
+    <div className="bg-[var(--bg-card)] rounded-[2.5rem] border border-brand-gold/10 overflow-hidden shadow-sm transition-colors duration-300">
       <div className="p-6 md:p-8 border-b border-brand-gold/10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
         <div>
-          <h3 className="font-headline text-xl font-bold text-brand-navy">General Ledger</h3>
-          <p className="text-xs text-brand-text/50 mt-1 font-body">Recent 10 chronological entries</p>
+          <h3 className="font-headline text-xl font-bold text-[var(--text-primary)]">General Ledger</h3>
+          <p className="text-xs text-[var(--text-secondary)] mt-1 font-body opacity-60">Recent 10 chronological entries</p>
         </div>
         <button 
           onClick={handleExport}
-          className="flex items-center gap-2 bg-brand-navy/5 text-brand-navy px-4 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-brand-navy hover:text-white transition-all"
+          className="flex items-center gap-2 bg-[var(--text-primary)]/5 text-[var(--text-primary)] px-4 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-[var(--text-primary)] hover:text-[var(--bg-page)] transition-all font-bold"
         >
           <Download className="w-4 h-4" />
           Export CSV Ledger

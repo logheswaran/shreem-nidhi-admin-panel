@@ -1,36 +1,23 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMemo } from 'react'
 import { financeService } from './api'
 import toast from 'react-hot-toast'
 
 /**
- * Hook for managing ledger state with optimistic updates and computed statistics.
+ * Hook for managing ledger state with React Query for smart caching and computed statistics.
  */
 export const useLedger = () => {
-  const [ledger, setLedger] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const queryClient = useQueryClient()
 
-  const fetchLedger = useCallback(async () => {
-    try {
-      setLoading(true)
-      const data = await financeService.getLedger()
-      setLedger(data)
-      setError(null)
-    } catch (err) {
-      setError(err)
-      toast.error('Failed to sync institutional ledger')
-    } finally {
-      setLoading(false)
-    }
-  }, [])
+  // 1. DATA QUERY (WITH CACHING)
+  const { data: ledger = [], isLoading: loading, error } = useQuery({
+    queryKey: ['ledger'],
+    queryFn: financeService.getLedger,
+    staleTime: 1000 * 60 * 5, // 5 minutes cache freshness
+    cacheTime: 1000 * 60 * 30, // 30 minutes in RAM
+  })
 
-  useEffect(() => {
-    fetchLedger()
-  }, [fetchLedger])
-
-  /**
-   * Computed stats for the ledger
-   */
+  // 2. COMPUTED STATS (MEMOIZED)
   const stats = useMemo(() => {
     const totalCredit = ledger
       .filter(l => l.transaction_type === 'credit')
@@ -62,77 +49,51 @@ export const useLedger = () => {
     }
   }, [ledger])
 
-  /**
-   * Optimistically add a ledger entry
-   */
-  const addEntry = async (payload) => {
-    const tempId = 'temp-' + Date.now()
-    const optimistic = { 
-      id: tempId, 
-      ...payload, 
-      created_at: payload.created_at || new Date().toISOString(),
-      profiles: payload.full_name ? { full_name: payload.full_name } : null,
-      chits: null // We don't have chit name easily available here without more lookups
-    }
-    
-    setLedger(prev => [optimistic, ...prev])
-    
-    try {
-      const real = await financeService.createLedgerEntry(payload)
-      setLedger(prev => prev.map(l => l.id === tempId ? real : l))
+  // 3. MUTATIONS
+  const addMutation = useMutation({
+    mutationFn: financeService.createLedgerEntry,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ledger'] })
       toast.success('Ledger entry recorded')
-      return real
-    } catch (err) {
-      setLedger(prev => prev.filter(l => l.id !== tempId))
+    },
+    onError: (err) => {
+      console.error('Ledger add error:', err)
       toast.error('Failed to record entry')
-      throw err
     }
-  }
+  })
 
-  /**
-   * Optimistically update a ledger entry
-   */
-  const editEntry = async (id, updates) => {
-    const previousLedger = [...ledger]
-    setLedger(prev => prev.map(l => l.id === id ? { ...l, ...updates } : l))
-    
-    try {
-      const updated = await financeService.updateLedgerEntry(id, updates)
-      setLedger(prev => prev.map(l => l.id === id ? updated : l))
+  const editMutation = useMutation({
+    mutationFn: ({ id, updates }) => financeService.updateLedgerEntry(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ledger'] })
       toast.success('Ledger entry updated')
-      return updated
-    } catch (err) {
-      setLedger(previousLedger)
+    },
+    onError: (err) => {
+      console.error('Ledger edit error:', err)
       toast.error('Failed to update entry')
-      throw err
     }
-  }
+  })
 
-  /**
-   * Optimistically remove a ledger entry
-   */
-  const removeEntry = async (id) => {
-    const previousLedger = [...ledger]
-    setLedger(prev => prev.filter(l => l.id !== id))
-    
-    try {
-      await financeService.deleteLedgerEntry(id)
+  const removeMutation = useMutation({
+    mutationFn: financeService.deleteLedgerEntry,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['ledger'] })
       toast.success('Entry removed from ledger')
-    } catch (err) {
-      setLedger(previousLedger)
+    },
+    onError: (err) => {
+      console.error('Ledger delete error:', err)
       toast.error('Failed to delete entry')
-      throw err
     }
-  }
+  })
 
   return {
     ledger,
     loading,
     error,
     stats,
-    addEntry,
-    editEntry,
-    removeEntry,
-    refetch: fetchLedger
+    addEntry: (payload) => addMutation.mutateAsync(payload),
+    editEntry: (id, updates) => editMutation.mutateAsync({ id, updates }),
+    removeEntry: (id) => removeMutation.mutateAsync(id),
+    refetch: () => queryClient.invalidateQueries({ queryKey: ['ledger'] })
   }
 }

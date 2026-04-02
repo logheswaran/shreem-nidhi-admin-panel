@@ -9,10 +9,11 @@ import ErrorBoundary from './shared/components/feedback/ErrorBoundary'
 const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
-      staleTime: 1000 * 60 * 5,
-      cacheTime: 1000 * 60 * 30,
+      staleTime: 1000 * 60 * 2, // 2 minutes freshness
+      cacheTime: 1000 * 60 * 5, // 5 minutes in memory (Reduced from 30m for lower footprint)
       retry: 1,
-      refetchOnWindowFocus: false,
+      refetchOnWindowFocus: false, // Prevents excessive CPU usage on tab switching
+      refetchOnReconnect: true,
     },
   },
 })

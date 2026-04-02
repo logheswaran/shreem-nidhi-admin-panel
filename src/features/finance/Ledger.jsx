@@ -23,9 +23,11 @@ import { useAuth } from '../../core/providers/AuthProvider'
 import DataTable from '../../shared/components/ui/DataTable'
 import LedgerFormModal from './components/LedgerFormModal'
 import LedgerDetailModal from './components/LedgerDetailModal'
+import DateRangePicker from '../../shared/components/ui/DateRangePicker'
 import ConfirmDialog from '../../shared/components/ui/ConfirmDialog'
 import { exportToCSV, exportToPDF } from '../../shared/utils/exportUtils'
 import toast from 'react-hot-toast'
+import { startOfDay } from 'date-fns'
 
 const Ledger = () => {
   const { isAdmin } = useAuth()
@@ -71,8 +73,9 @@ const Ledger = () => {
       if (typeFilter !== 'all' && l.transaction_type !== typeFilter) return false
 
       // Date range filter
-      if (dateFrom && new Date(l.created_at) < new Date(dateFrom)) return false
-      if (dateTo && new Date(l.created_at) > new Date(dateTo + 'T23:59:59')) return false
+      // Date range filter
+      if (dateFrom && new Date(l.created_at) < dateFrom) return false
+      if (dateTo && new Date(l.created_at) > new Date(new Date(dateTo).setHours(23, 59, 59, 999))) return false
 
       return true
     })
@@ -306,29 +309,15 @@ const Ledger = () => {
               ))}
             </div>
 
-            {/* Date Range */}
-            <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-brand-gold/5 shadow-sm">
-               <div className="flex items-center gap-2">
-                 <input 
-                  type="date" 
-                  value={dateFrom} 
-                  onChange={(e) => setDateFrom(e.target.value)}
-                  className="text-[10px] font-bold text-brand-navy focus:outline-none bg-transparent cursor-pointer"
-                 />
-                 <span className="text-brand-text/20">/</span>
-                 <input 
-                  type="date" 
-                  value={dateTo} 
-                  onChange={(e) => setDateTo(e.target.value)}
-                  className="text-[10px] font-bold text-brand-navy focus:outline-none bg-transparent cursor-pointer"
-                 />
-               </div>
-               {(dateFrom || dateTo) && (
-                 <button onClick={() => { setDateFrom(''); setDateTo(''); }} className="p-1 hover:bg-brand-gold/10 rounded-full transition-colors">
-                    <X className="w-3 h-3 text-brand-gold" />
-                 </button>
-               )}
-            </div>
+            {/* Date Range (Prompt 5) */}
+            <DateRangePicker 
+              startDate={dateFrom} 
+              endDate={dateTo} 
+              onChange={(start, end) => {
+                setDateFrom(start);
+                setDateTo(end);
+              }}
+            />
           </div>
         </div>
       </div>
