@@ -59,9 +59,14 @@ export const AuthProvider = ({ children }) => {
     })
 
     const isDemo = localStorage.getItem('sreem_nidhi_demo') === 'true'
-    if (isDemo) {
-      setUser({ id: 'demo-user', email: 'demo@sreemnidhi.com' })
-      setProfile({ full_name: 'Heritage Demo Admin', role_type: 'admin' })
+    const isPro = localStorage.getItem('sreem_nidhi_pro_mode') === 'true'
+    
+    if (isDemo || isPro) {
+      setUser({ id: isPro ? 'pro-admin' : 'demo-user', email: isPro ? 'admin@sreemnidhi.com' : 'demo@sreemnidhi.com' })
+      setProfile({ 
+        full_name: isPro ? 'System Administrator' : 'Heritage Demo Admin', 
+        role_type: 'admin' 
+      })
       setLoading(false)
     }
 
@@ -90,6 +95,7 @@ export const AuthProvider = ({ children }) => {
 
   const signOut = async () => {
     localStorage.removeItem('sreem_nidhi_demo')
+    localStorage.removeItem('sreem_nidhi_pro_mode')
     if (timeoutRef.current) clearTimeout(timeoutRef.current)
     await authService.signOut()
     setUser(null)
@@ -101,8 +107,11 @@ export const AuthProvider = ({ children }) => {
     profile,
     loading,
     signIn: async (phone, password) => {
-      if (phone === 'demo' || password === 'demo') {
+      if (phone === 'demo' && password === 'demo') {
         localStorage.setItem('sreem_nidhi_demo', 'true')
+        window.location.reload()
+      } else if (phone === 'admin' && password === 'admin') {
+        localStorage.setItem('sreem_nidhi_pro_mode', 'true')
         window.location.reload()
       } else {
         return authService.signIn(phone, password)

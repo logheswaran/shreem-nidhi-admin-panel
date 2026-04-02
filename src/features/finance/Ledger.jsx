@@ -1,175 +1,384 @@
-import React, { useEffect, useState } from 'react'
-import { History, Search, Download, Filter, ArrowUpRight, ArrowDownLeft, ShieldCheck, Database } from 'lucide-react'
-import { financeService } from './api'
+import React, { useState, useMemo, useEffect } from 'react'
+import { 
+  Plus, 
+  Search, 
+  Download, 
+  History, 
+  ArrowUpRight, 
+  ArrowDownLeft, 
+  Filter, 
+  X,
+  CreditCard,
+  Wallet,
+  Activity,
+  Trash2,
+  Pencil,
+  Eye,
+  ShieldCheck
+} from 'lucide-react'
+import { useLedger } from './useLedger'
+import { useMembers } from '../members/useMembers'
+import { useDebounce } from '../../shared/hooks/useDebounce'
+import { useAuth } from '../../core/providers/AuthProvider'
 import DataTable from '../../shared/components/ui/DataTable'
+import LedgerFormModal from './components/LedgerFormModal'
+import LedgerDetailModal from './components/LedgerDetailModal'
+import ConfirmDialog from '../../shared/components/ui/ConfirmDialog'
 import { exportToCSV, exportToPDF } from '../../shared/utils/exportUtils'
 import toast from 'react-hot-toast'
 
 const Ledger = () => {
-  const [ledger, setLedger] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [searchTerm, setSearchTerm] = useState('')
+  const { isAdmin } = useAuth()
+  const { ledger, loading, stats, addEntry, editEntry, removeEntry } = useLedger()
+  const { members } = useMembers()
 
+  // UI State
+  const [searchTerm, setSearchTerm] = useState('')
+  const [typeFilter, setTypeFilter] = useState('all')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
+  const [selectedEntry, setSelectedEntry] = useState(null)
+  const [editingEntry, setEditingEntry] = useState(null)
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
+  const [deleteTargetId, setDeleteTargetId] = useState(null)
+
+  const debouncedSearch = useDebounce(searchTerm, 300)
+
+  // Keyboard Shortcuts
   useEffect(() => {
-    const fetchLedger = async () => {
-      try {
-        setLoading(true)
-        const data = await financeService.getLedger()
-        setLedger(data)
-      } catch (error) {
-        toast.error('Failed to sync with secure ledger')
-      } finally {
-        setLoading(false)
+    const handler = (e) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 'n') {
+        e.preventDefault()
+        setShowAddModal(true)
       }
     }
-    fetchLedger()
+    document.addEventListener('keydown', handler)
+    return () => document.removeEventListener('keydown', handler)
   }, [])
 
-  const filteredLedger = ledger.filter(l => 
-    l.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    l.id.includes(searchTerm)
-  )
+  // Filter Pipeline
+  const filteredLedger = useMemo(() => {
+    return ledger.filter(l => {
+      // Search filter (Member name or ID)
+      const name = l.profiles?.full_name?.toLowerCase() || ''
+      const phone = l.profiles?.phone_number || ''
+      const id = l.id.toLowerCase()
+      const search = debouncedSearch.toLowerCase()
+      if (search && !name.includes(search) && !id.includes(search) && !phone.includes(search)) return false
+
+      // Type filter
+      if (typeFilter !== 'all' && l.transaction_type !== typeFilter) return false
+
+      // Date range filter
+      if (dateFrom && new Date(l.created_at) < new Date(dateFrom)) return false
+      if (dateTo && new Date(l.created_at) > new Date(dateTo + 'T23:59:59')) return false
+
+      return true
+    })
+  }, [ledger, debouncedSearch, typeFilter, dateFrom, dateTo])
+
+  // Responsive stats based on filters
+  const displayStats = useMemo(() => {
+    const credits = filteredLedger.filter(l => l.transaction_type === 'credit').reduce((s, l) => s + Number(l.amount), 0)
+    const debits = filteredLedger.filter(l => l.transaction_type === 'debit').reduce((s, l) => s + Number(l.amount), 0)
+    return {
+      credits,
+      debits,
+      balance: credits - debits
+    }
+  }, [filteredLedger])
 
   const columns = [
-    { 
-      header: 'Entry Reference', 
+    {
+      header: 'Entry Reference',
       render: (row) => (
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-lg ${row.transaction_type === 'credit' ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}`}>
-            {row.transaction_type === 'credit' ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
+            {row.transaction_type === 'credit' ? <ArrowDownLeft className="w-3.5 h-3.5" /> : <ArrowUpRight className="w-3.5 h-3.5" />}
           </div>
           <div className="flex flex-col">
             <span className="font-mono text-[10px] font-bold text-brand-text/30 uppercase tracking-tighter">REF-{row.id.slice(0, 8).toUpperCase()}</span>
-            <span className="text-xs font-bold text-brand-navy capitalize">{row.reference_type.replace('_', ' ')}</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-brand-navy truncate max-w-[100px]">{row.reference_type?.replace('_', ' ') || 'General'}</span>
           </div>
         </div>
       )
     },
-    { 
-      header: 'Account Identity', 
+    {
+      header: 'Account Identity',
       render: (row) => (
         <div className="flex flex-col">
-          <span className="font-bold text-brand-navy group-hover:text-brand-gold transition-colors">{row.profiles?.full_name || 'System Protocol'}</span>
-          <span className="text-[10px] text-brand-text/30 font-bold tracking-widest uppercase">{row.chits?.name || 'Institutional'}</span>
+          <span className="text-xs font-bold text-brand-navy">{row.profiles?.full_name || 'System Protocol'}</span>
+          <span className="text-[9px] text-brand-text/30 font-bold tracking-widest uppercase">{row.chits?.name || 'Treasury'}</span>
         </div>
       )
     },
-    { 
-      header: 'Capital Impact', 
+    {
+      header: 'Capital Impact',
       render: (row) => (
-        <span className={`font-headline font-bold text-lg ${row.transaction_type === 'credit' ? 'text-green-600' : 'text-red-600'}`}>
-          {row.transaction_type === 'credit' ? '+' : '-'} ₹{Number(row.amount).toLocaleString()}
-        </span>
+        <div className="flex flex-col">
+          <span className={`font-headline font-bold ${row.transaction_type === 'credit' ? 'text-green-600' : 'text-red-500'}`}>
+            {row.transaction_type === 'credit' ? '+' : '-'} ₹{Number(row.amount).toLocaleString()}
+          </span>
+          <span className="text-[9px] text-brand-text/20 font-bold">Running: ₹{stats.runningBalances[row.id]?.toLocaleString() || '--'}</span>
+        </div>
       )
     },
-    { 
-      header: 'Verification', 
+    {
+      header: 'Timestamp',
       render: (row) => (
-        <div className="flex items-center gap-2 text-brand-text/40">
-          <ShieldCheck className="w-4 h-4 text-brand-gold/40" />
-          <span className="text-[10px] font-bold uppercase tracking-widest">{new Date(row.created_at).toLocaleString()}</span>
+        <div className="flex flex-col">
+          <span className="text-[10px] font-bold text-brand-text/60">{new Date(row.created_at).toLocaleDateString()}</span>
+          <span className="text-[9px] text-brand-text/30 uppercase font-black tracking-tighter">{new Date(row.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+        </div>
+      )
+    },
+    {
+      header: 'Actions',
+      render: (row) => (
+        <div className="flex items-center gap-1">
+          <button 
+            onClick={(e) => { e.stopPropagation(); setSelectedEntry(row); }}
+            className="p-1.5 hover:bg-brand-gold/10 text-brand-gold transition-colors rounded-lg"
+            title="Audit Details"
+          >
+            <Eye className="w-3.5 h-3.5" />
+          </button>
+          {isAdmin && (
+            <>
+              <button 
+                onClick={(e) => { e.stopPropagation(); setEditingEntry(row); }}
+                className="p-1.5 hover:bg-brand-gold/10 text-brand-gold transition-colors rounded-lg"
+                title="Adjust Entry"
+              >
+                <Pencil className="w-3.5 h-3.5" />
+              </button>
+              <button 
+                onClick={(e) => { 
+                  e.stopPropagation(); 
+                  setDeleteTargetId(row.id);
+                  setShowDeleteConfirm(true); 
+                }}
+                className="p-1.5 hover:bg-red-50 text-red-500 transition-colors rounded-lg"
+                title="Delete Entry"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </>
+          )}
         </div>
       )
     }
   ]
 
+  const handleCreateEntry = async (data) => {
+    try {
+      const member = members.find(m => m.user_id === data.user_id);
+      await addEntry({ ...data, full_name: member?.profiles?.full_name });
+      setShowAddModal(false);
+    } catch (err) {}
+  }
+
+  const handleUpdateEntry = async (data) => {
+    try {
+      await editEntry(editingEntry.id, data);
+      setEditingEntry(null);
+    } catch (err) {}
+  }
+
+  const handleDeleteEntry = async () => {
+    try {
+      await removeEntry(deleteTargetId);
+      setShowDeleteConfirm(false);
+      setDeleteTargetId(null);
+    } catch (err) {}
+  }
+
+  const handleCSVExport = () => {
+    const exportCols = [
+      { header: 'Ref ID', accessor: 'id' },
+      { header: 'Member', accessor: 'profiles.full_name' },
+      { header: 'Amount', accessor: 'amount' },
+      { header: 'Type', accessor: 'transaction_type' },
+      { header: 'Category', accessor: 'reference_type' },
+      { header: 'Date', accessor: 'created_at' }
+    ]
+    const data = filteredLedger.map(l => ({
+      ...l,
+      'profiles.full_name': l.profiles?.full_name || 'System'
+    }))
+    exportToCSV(data, exportCols, `SreemNidhi_Ledger_${new Date().toISOString().split('T')[0]}`)
+    toast.success('Ledger exported to CSV')
+  }
+
+  const handlePDFExport = () => {
+    const exportCols = [
+      { header: 'Ref ID', accessor: 'id' },
+      { header: 'Member', accessor: 'profiles.full_name' },
+      { header: 'Type', accessor: 'transaction_type' },
+      { header: 'Amount', accessor: 'amount' },
+      { header: 'Date', accessor: 'created_at' }
+    ]
+    const data = filteredLedger.map(l => ({
+      ...l,
+      'profiles.full_name': l.profiles?.full_name || 'System',
+      id: 'REF-' + l.id.slice(0, 8).toUpperCase()
+    }))
+    exportToPDF(data, exportCols, 'Institutional Ledger Audit')
+    toast.success('Audit report generated in PDF')
+  }
+
   return (
-    <div className="animate-in fade-in duration-700">
+    <div className="animate-in fade-in duration-1000">
+      {/* Header Section */}
       <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
+          <div className="flex items-center gap-3 mb-2">
+            <History className="w-5 h-5 text-brand-gold" />
+            <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-gold">Financial Protocol</span>
+          </div>
           <h2 className="text-4xl font-headline font-bold text-brand-navy">Institutional Ledger</h2>
-          <p className="text-on-surface-variant font-body mt-2 opacity-70">The immutable record of all SreemNidhi trust movements. Verified by secure protocol.</p>
+          <p className="text-on-surface-variant font-body mt-2 opacity-70">Audited movements across the trust's digital vaults.</p>
         </div>
         <div className="flex gap-4">
+          <div className="flex bg-white rounded-full p-1 border border-brand-gold/10 shadow-sm">
+             <button onClick={handleCSVExport} className="px-4 py-2 text-[8px] font-black uppercase tracking-widest text-brand-navy hover:bg-brand-gold/5 rounded-full transition-all">CSV</button>
+             <button onClick={handlePDFExport} className="px-4 py-2 text-[8px] font-black uppercase tracking-widest text-brand-navy hover:bg-brand-gold/5 rounded-full transition-all">PDF Report</button>
+          </div>
           <button 
-            onClick={() => {
-              const exportCols = [
-                { header: 'Ref ID', accessor: 'id' },
-                { header: 'Member', accessor: 'profiles' },
-                { header: 'Type', accessor: 'transaction_type' },
-                { header: 'Category', accessor: 'reference_type' },
-                { header: 'Amount', accessor: 'amount' },
-                { header: 'Date', accessor: 'created_at' },
-              ]
-              const exportData = filteredLedger.map(l => ({
-                ...l,
-                profiles: l.profiles?.full_name || 'System'
-              }))
-              exportToCSV(exportData, exportCols, 'SreemNidhi_Ledger')
-              toast.success('Ledger exported as CSV')
-            }}
-            className="bg-white px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest text-brand-navy border border-brand-gold/10 hover:bg-brand-gold/5 transition-all shadow-sm flex items-center gap-3 active:scale-95"
+            onClick={() => setShowAddModal(true)}
+            className="heritage-gradient px-8 py-3.5 text-white text-[10px] font-black uppercase tracking-widest rounded-full flex items-center gap-3 shadow-xl hover:brightness-110 transition-all active:scale-95"
           >
-            <Download className="w-4 h-4" /> CSV
-          </button>
-          <button 
-            onClick={() => {
-              const exportCols = [
-                { header: 'Ref ID', accessor: 'id' },
-                { header: 'Member', accessor: 'profiles' },
-                { header: 'Type', accessor: 'transaction_type' },
-                { header: 'Amount', accessor: 'amount' },
-                { header: 'Date', accessor: 'created_at' },
-              ]
-              const exportData = filteredLedger.map(l => ({
-                ...l,
-                profiles: l.profiles?.full_name || 'System',
-                id: 'REF-' + l.id.slice(0, 8).toUpperCase()
-              }))
-              exportToPDF(exportData, exportCols, 'SreemNidhi Institutional Ledger')
-            }}
-            className="heritage-gradient px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest text-white shadow-xl hover:brightness-110 transition-all flex items-center gap-3 active:scale-95"
-          >
-            <Download className="w-4 h-4" /> PDF
+            <Plus className="w-4 h-4" /> Record New Entry
           </button>
         </div>
       </header>
 
-      {/* Ledger Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-10">
-         <div className="bg-white/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-brand-gold/5 flex gap-5 items-center">
-            <div className="w-14 h-14 rounded-2xl bg-green-50 flex items-center justify-center"><ArrowDownLeft className="text-green-600 w-7 h-7" /></div>
-            <div>
-              <p className="text-2xl font-headline font-bold text-brand-navy leading-none">₹{ledger.filter(l => l.transaction_type === 'credit').reduce((s,l) => s + Number(l.amount), 0).toLocaleString()}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-brand-gold/60 mt-2">Total Inflow</p>
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
+        {[
+          { label: 'Cumulative Inflow', value: displayStats.credits, icon: Wallet, color: 'text-green-600', bg: 'bg-green-50/50' },
+          { label: 'Institutional Outflow', value: displayStats.debits, icon: CreditCard, color: 'text-red-500', bg: 'bg-red-50/50' },
+          { label: 'Net Asset Balance', value: displayStats.balance, icon: Activity, color: 'text-brand-gold', bg: 'bg-brand-gold/5' }
+        ].map((item, idx) => (
+          <div key={idx} className={`${item.bg} backdrop-blur-md p-8 rounded-[2.5rem] border border-brand-gold/5 flex gap-6 items-center shadow-sm group hover:scale-[1.02] transition-all`}>
+            <div className="w-16 h-16 rounded-2xl bg-white flex items-center justify-center shadow-inner group-hover:rotate-12 transition-transform">
+              <item.icon className={`w-8 h-8 ${item.color}`} />
             </div>
-         </div>
-         <div className="bg-white/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-brand-gold/5 flex gap-5 items-center">
-            <div className="w-14 h-14 rounded-2xl bg-red-50 flex items-center justify-center"><ArrowUpRight className="text-red-600 w-7 h-7" /></div>
             <div>
-              <p className="text-2xl font-headline font-bold text-brand-navy leading-none">₹{ledger.filter(l => l.transaction_type === 'debit').reduce((s,l) => s + Number(l.amount), 0).toLocaleString()}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-brand-gold/60 mt-2">Total Outflow</p>
+              <p className={`text-2xl font-headline font-bold text-brand-navy`}>₹{Math.abs(item.value).toLocaleString()}</p>
+              <p className="text-[10px] font-black uppercase tracking-widest text-brand-gold/60 mt-1">{item.label}</p>
             </div>
-         </div>
-         <div className="bg-white/40 backdrop-blur-md p-8 rounded-[2.5rem] border border-brand-gold/5 flex gap-5 items-center">
-            <div className="w-14 h-14 rounded-2xl bg-brand-gold/10 flex items-center justify-center"><Database className="text-brand-gold w-7 h-7" /></div>
-            <div>
-              <p className="text-2xl font-headline font-bold text-brand-navy leading-none">{ledger.length}</p>
-              <p className="text-[10px] font-black uppercase tracking-widest text-brand-gold/60 mt-2">Audited Entries</p>
-            </div>
-         </div>
+          </div>
+        ))}
       </div>
 
-      {/* Search Bar */}
-      <div className="mb-8 relative group">
-        <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-brand-text/20 group-focus-within:text-brand-gold transition-colors w-5 h-5" />
-        <input 
-          className="w-full bg-white border-2 border-brand-gold/5 rounded-[2rem] py-5 pl-16 pr-8 text-sm font-body focus:ring-4 focus:ring-brand-gold/10 focus:border-brand-gold/30 focus:outline-none transition-all shadow-sm placeholder:text-brand-text/10"
-          placeholder="Search by Transaction ID or Member Identity..."
-          type="text"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
+      {/* Advanced Filtering */}
+      <div className="bg-white/40 backdrop-blur-xl p-6 rounded-[2.5rem] border border-brand-gold/5 shadow-sm mb-10">
+        <div className="flex flex-col lg:flex-row gap-6 items-center">
+          {/* Main Search */}
+          <div className="relative group w-full lg:flex-1">
+            <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-brand-text/20 group-focus-within:text-brand-gold transition-colors w-5 h-5" />
+            <input 
+              className="w-full bg-white border-2 border-brand-gold/5 rounded-2xl py-4 pl-16 pr-8 text-sm font-body focus:ring-4 focus:ring-brand-gold/10 focus:border-brand-gold/30 focus:outline-none transition-all placeholder:text-brand-text/10 shadow-sm"
+              placeholder="Search Ref ID, Member Identity, or Security Protocol..."
+              type="text"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+
+          <div className="flex flex-wrap gap-4 items-center justify-center lg:justify-end">
+            {/* Type Pills */}
+            <div className="p-1 bg-brand-ivory rounded-xl flex gap-1">
+              {['all', 'credit', 'debit'].map((type) => (
+                <button
+                  key={type}
+                  onClick={() => setTypeFilter(type)}
+                  className={`px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all ${
+                    typeFilter === type 
+                      ? 'bg-white text-brand-navy shadow-sm' 
+                      : 'text-brand-text/40 hover:text-brand-navy'
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+
+            {/* Date Range */}
+            <div className="flex items-center gap-3 bg-white px-4 py-2 rounded-2xl border border-brand-gold/5 shadow-sm">
+               <div className="flex items-center gap-2">
+                 <input 
+                  type="date" 
+                  value={dateFrom} 
+                  onChange={(e) => setDateFrom(e.target.value)}
+                  className="text-[10px] font-bold text-brand-navy focus:outline-none bg-transparent cursor-pointer"
+                 />
+                 <span className="text-brand-text/20">/</span>
+                 <input 
+                  type="date" 
+                  value={dateTo} 
+                  onChange={(e) => setDateTo(e.target.value)}
+                  className="text-[10px] font-bold text-brand-navy focus:outline-none bg-transparent cursor-pointer"
+                 />
+               </div>
+               {(dateFrom || dateTo) && (
+                 <button onClick={() => { setDateFrom(''); setDateTo(''); }} className="p-1 hover:bg-brand-gold/10 rounded-full transition-colors">
+                    <X className="w-3 h-3 text-brand-gold" />
+                 </button>
+               )}
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="soft-glow bg-white/20 rounded-[2.5rem] border border-brand-gold/5 overflow-hidden">
+        <DataTable 
+          columns={columns} 
+          data={filteredLedger} 
+          loading={loading} 
+          onRowClick={(row) => setSelectedEntry(row)}
         />
       </div>
 
-      <DataTable columns={columns} data={filteredLedger} loading={loading} />
-      
-      <footer className="mt-12 text-center">
-        <div className="inline-flex items-center gap-3 px-6 py-3 bg-brand-gold/5 rounded-full border border-brand-gold/10 opacity-40 grayscale hover:grayscale-0 transition-all duration-700">
-           <ShieldCheck className="w-4 h-4 text-brand-gold" />
-           <span className="text-[9px] font-black uppercase tracking-[0.3em] text-brand-navy">Cryptographic Proof Verified</span>
+      <footer className="mt-16 text-center">
+        <div className="inline-flex items-center gap-4 px-8 py-3.5 bg-brand-navy/5 rounded-full border border-brand-gold/10 opacity-60 grayscale hover:grayscale-0 transition-all duration-1000">
+           <ShieldCheck className="w-5 h-5 text-brand-gold" />
+           <span className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-navy">Cryptographic Proof Verified at Institutional Grade</span>
         </div>
       </footer>
+
+      {/* Modals */}
+      <LedgerFormModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSubmit={handleCreateEntry}
+        members={members}
+      />
+
+      <LedgerFormModal
+        isOpen={!!editingEntry}
+        onClose={() => setEditingEntry(null)}
+        onSubmit={handleUpdateEntry}
+        initialData={editingEntry}
+        members={members}
+      />
+
+      <LedgerDetailModal
+        isOpen={!!selectedEntry}
+        onClose={() => setSelectedEntry(null)}
+        entry={selectedEntry}
+      />
+
+      <ConfirmDialog
+        isOpen={showDeleteConfirm}
+        onClose={() => setShowDeleteConfirm(false)}
+        onConfirm={handleDeleteEntry}
+        title="Delete Institutional Record?"
+        description="This action will expunge this financial entry from the immutable ledger. This protocol modification is recorded for audit."
+        intent="danger"
+      />
     </div>
   )
 }
