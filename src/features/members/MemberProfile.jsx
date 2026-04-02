@@ -108,7 +108,7 @@ const MemberProfile = () => {
                </div>
                <div>
                  <p className="text-[9px] uppercase tracking-[0.2em] font-black text-brand-text/30">Primary Contact</p>
-                 <p className="font-bold text-brand-navy text-sm mt-0.5">{member.profiles?.phone_number || 'N/A'}</p>
+                 <p className="font-bold text-brand-navy text-sm mt-0.5">{member.profiles?.mobile_number || 'N/A'}</p>
                </div>
              </div>
 
@@ -128,7 +128,7 @@ const MemberProfile = () => {
                </div>
                <div>
                  <p className="text-[9px] uppercase tracking-[0.2em] font-black text-brand-text/30">Registration Date</p>
-                 <p className="font-bold text-brand-navy text-sm mt-0.5">{new Date(member.created_at).toLocaleDateString()}</p>
+                 <p className="font-bold text-brand-navy text-sm mt-0.5">{member.joined_at ? new Date(member.joined_at).toLocaleDateString() : 'N/A'}</p>
                </div>
              </div>
           </div>
