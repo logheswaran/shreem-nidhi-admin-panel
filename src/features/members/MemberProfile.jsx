@@ -6,6 +6,8 @@ import { financeService } from '../finance/api'
 import DataTable from '../../shared/components/ui/DataTable'
 import StatusBadge from '../../shared/components/ui/StatusBadge'
 import toast from 'react-hot-toast'
+import ConfirmDialog from '../../shared/components/ui/ConfirmDialog'
+import { supabase } from '../../core/lib/supabase'
 
 const MemberProfile = () => {
   const { id } = useParams()
@@ -13,6 +15,8 @@ const MemberProfile = () => {
   const [member, setMember] = useState(null)
   const [transactions, setTransactions] = useState([])
   const [loading, setLoading] = useState(true)
+  const [confirmFreeze, setConfirmFreeze] = useState(false)
+  const [isProcessing, setIsProcessing] = useState(false)
 
   useEffect(() => {
     const fetchMemberData = async () => {
@@ -42,6 +46,29 @@ const MemberProfile = () => {
 
     if (id) fetchMemberData()
   }, [id, navigate])
+
+  const handleToggleFreeze = async () => {
+    try {
+      setIsProcessing(true)
+      const newStatus = member.profiles?.is_frozen ? false : true
+      const { error } = await supabase.rpc('admin_freeze_member', { 
+         p_member_id: member.id, 
+         p_freeze: newStatus 
+      })
+      if (error) throw error
+      
+      toast.success(`Account ${newStatus ? 'Frozen' : 'Unfrozen'} Successfully`)
+      setMember(prev => ({ 
+        ...prev, 
+        profiles: { ...prev.profiles, is_frozen: newStatus } 
+      }))
+      setConfirmFreeze(false)
+    } catch (err) {
+      toast.error(err.message || 'Failed to update freeze status')
+    } finally {
+      setIsProcessing(false)
+    }
+  }
 
   if (loading) {
     return (
@@ -96,8 +123,16 @@ const MemberProfile = () => {
           
           <h2 className="text-3xl font-headline font-bold text-brand-navy dark:text-[#F0EDD4] leading-tight">{member.profiles?.full_name}</h2>
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-gold mt-2 bg-brand-gold/10 px-4 py-1.5 rounded-full inline-flex items-center gap-2">
-            <div className="w-1.5 h-1.5 rounded-full bg-brand-gold animate-pulse"></div> Active Delegate
+            <div className={`w-1.5 h-1.5 rounded-full ${member.profiles?.is_frozen ? 'bg-red-500' : 'bg-brand-gold animate-pulse'}`}></div> 
+            {member.profiles?.is_frozen ? 'Frozen Delegate' : 'Active Delegate'}
           </p>
+
+          {member.profiles?.is_frozen && (
+            <div className="mt-4 px-4 py-2 bg-red-50 border border-red-200 text-red-600 text-xs font-bold rounded-xl w-full text-left flex items-start gap-2">
+               <AlertOctagon className="w-4 h-4 shrink-0" />
+               <p>Account suspended. Financial operations are blocked.</p>
+            </div>
+          )}
           
           <div className="w-full h-px bg-brand-gold/10 my-8"></div>
 
@@ -138,16 +173,16 @@ const MemberProfile = () => {
         <div className="lg:col-span-2 flex flex-col gap-8">
            {/* Summary Cards */}
            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-              <div className="bg-brand-ivory/50 dark:bg-[#16213E] rounded-[2rem] p-6 border border-brand-gold/10 hover:bg-white dark:hover:bg-[#1a2b4e] transition-colors group cursor-default">
+              <div className="bg-white rounded-[2rem] p-6 border border-brand-gold/10 hover:shadow-md transition-all group cursor-default">
                  <Wallet className="w-6 h-6 text-brand-gold mb-4 stroke-[1.5]" />
-                 <h4 className="text-[10px] font-black uppercase tracking-[0.1em] text-brand-text/40 dark:text-[#A89F8C] mb-1">Total Assets</h4>
-                 <p className="text-2xl font-headline font-bold text-brand-navy dark:text-[#F0EDD4] group-hover:text-brand-gold transition-colors">
+                 <h4 className="text-[10px] font-black uppercase tracking-[0.1em] text-on-surface-variant mb-1">Total Assets</h4>
+                 <p className="text-2xl font-headline font-bold text-brand-navy group-hover:text-brand-gold transition-colors">
                    ₹{transactions.filter(t => t.transaction_type === 'credit').reduce((s,t) => s + Number(t.amount), 0).toLocaleString()}
                  </p>
               </div>
-              <div className="bg-brand-ivory/50 rounded-[2rem] p-6 border border-brand-gold/10 hover:bg-white transition-colors group cursor-default">
+              <div className="bg-white rounded-[2rem] p-6 border border-brand-gold/10 hover:shadow-md transition-all group cursor-default">
                  <ArrowUpRight className="w-6 h-6 text-red-400 mb-4 stroke-[1.5]" />
-                 <h4 className="text-[10px] font-black uppercase tracking-[0.1em] text-brand-text/40 mb-1">Credit Exposure</h4>
+                 <h4 className="text-[10px] font-black uppercase tracking-[0.1em] text-on-surface-variant mb-1">Credit Exposure</h4>
                  <p className="text-2xl font-headline font-bold text-red-600 transition-colors">₹0</p>
               </div>
               <div className="bg-brand-navy rounded-[2rem] p-6 text-white text-center flex flex-col justify-center items-center relative overflow-hidden group hover:brightness-110 transition-all cursor-pointer">
@@ -155,7 +190,22 @@ const MemberProfile = () => {
                  <FileText className="w-6 h-6 text-brand-gold mb-3 z-10" />
                  <span className="text-[10px] font-black uppercase tracking-widest z-10">Export Profile<br/>Dossier</span>
               </div>
-           </div>
+            </div>
+
+           {/* Freeze Account Action */}
+           <div className="flex justify-end mt-2">
+               <button 
+                 onClick={() => setConfirmFreeze(true)}
+                 className={`px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all shadow-sm ${
+                   member.profiles?.is_frozen 
+                     ? 'bg-green-50 text-green-600 hover:bg-green-600 hover:text-white' 
+                     : 'bg-red-50 text-red-600 hover:bg-red-600 hover:text-white'
+                 }`}
+               >
+                 <ArrowUpRight className="w-3.5 h-3.5" /> 
+                 {member.profiles?.is_frozen ? 'Unfreeze Account' : 'Freeze Account'}
+               </button>
+            </div>
 
            {/* Personal Ledger */}
            <div className="bg-white rounded-[2.5rem] border border-brand-gold/10 overflow-hidden shadow-sm flex flex-col soft-glow">
@@ -170,6 +220,17 @@ const MemberProfile = () => {
            </div>
         </div>
       </div>
+
+      <ConfirmDialog 
+         isOpen={confirmFreeze}
+         onClose={() => setConfirmFreeze(false)}
+         onConfirm={handleToggleFreeze}
+         title={member.profiles?.is_frozen ? "Unfreeze Account" : "Freeze Account Override"}
+         message={member.profiles?.is_frozen ? "Restore this member's ability to participate in chits and make payments?" : "WARNING: Freezing an account blocks all system activity for this member (bidding, payments, etc). Use only for compliance or regulatory holds."}
+         intent={member.profiles?.is_frozen ? "brand" : "danger"}
+         confirmText={member.profiles?.is_frozen ? "Unfreeze" : "Force Freeze"}
+         loading={isProcessing}
+       />
     </div>
   )
 }

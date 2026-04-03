@@ -1,4 +1,4 @@
-import { supabase } from '../../core/supabase/client'
+import { supabase } from '../../core/lib/supabase'
 
 const MOCK_LEDGER = [
   {
@@ -144,19 +144,111 @@ export const financeService = {
     } catch { return [] }
   },
 
+  async getCollectionSummaries() {
+    const currentMonthDate = new Date()
+    const firstDay = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 1).toISOString().split('T')[0]
+    const lastDay = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0).toISOString().split('T')[0]
+    const today = new Date().toISOString().split('T')[0]
+
+    try {
+      // Current Month Due & Paid
+      const { data: monthData, error: monthError } = await supabase
+        .from('contributions')
+        .select('amount_due, amount_paid, payment_status, due_date')
+      
+      if (monthError) throw monthError
+
+      const summary = {
+        totalDueThisMonth: 0,
+        totalCollectedThisMonth: 0,
+        totalPending: 0,
+        totalOverdue: 0
+      }
+
+      monthData.forEach(c => {
+        if (c.due_date >= firstDay && c.due_date <= lastDay) {
+          summary.totalDueThisMonth += Number(c.amount_due)
+          if (c.payment_status === 'paid') {
+            summary.totalCollectedThisMonth += Number(c.amount_paid)
+          }
+        }
+        
+        if (c.payment_status === 'pending') {
+          summary.totalPending += Number(c.amount_due)
+          if (c.due_date < today) {
+            summary.totalOverdue += Number(c.amount_due)
+          }
+        }
+      })
+
+      return summary
+    } catch (e) {
+      console.error('Error fetching collection summaries:', e)
+      return { totalDueThisMonth: 0, totalCollectedThisMonth: 0, totalPending: 0, totalOverdue: 0 }
+    }
+  },
+
+  async getChitCollectionProgress() {
+    try {
+      const { data: chits, error: chitError } = await supabase.from('chits').select('*')
+      if (chitError) throw chitError
+
+      const { data: contributions, error: contError } = await supabase
+        .from('contributions')
+        .select('chit_id, amount_due, amount_paid, payment_status')
+      
+      if (contError) throw contError
+
+      return chits.map(chit => {
+        const chitConts = contributions.filter(c => c.chit_id === chit.id)
+        const totalDue = chitConts.reduce((sum, c) => sum + Number(c.amount_due), 0)
+        const totalPaid = chitConts.reduce((sum, c) => sum + (c.payment_status === 'paid' ? Number(c.amount_paid) : 0), 0)
+        
+        return {
+          ...chit,
+          totalDue,
+          totalPaid,
+          percentage: totalDue > 0 ? (totalPaid / totalDue) * 100 : 100
+        }
+      })
+    } catch (e) {
+      console.error('Error fetching chit collection progress:', e)
+      return []
+    }
+  },
+
   // WRITES (STRICT USAGE OF RPC)
   async createMonthContributions(chitId) {
     const { error } = await supabase.rpc('create_month_contributions', { p_chit_id: chitId })
     if (error) throw error
   },
 
-  async recordContribution(memberId, month, amount) {
+  async recordContribution(memberId, month, amount, paymentMode = 'Cash', paymentRef = '') {
+    // 1. Get contribution ID before recording so we can link it
+    const { data: contData } = await supabase
+      .from('contributions')
+      .select('id')
+      .eq('member_id', memberId)
+      .eq('month_number', month)
+      .single()
+
+    // 2. Call RPC to process payment
     const { error } = await supabase.rpc('record_contribution', { 
       p_member_id: memberId, 
       p_month_number: month, 
       p_amount: amount 
     })
     if (error) throw error
+
+    // 3. Log payment mode to audit_logs (Option A)
+    if (contData) {
+      const actionPayload = { type: 'payment_recorded', mode: paymentMode, ref: paymentRef }
+      await supabase.from('audit_logs').insert([{
+        table_name: 'contributions',
+        record_id: contData.id,
+        action: JSON.stringify(actionPayload)
+      }])
+    }
   },
 
   async selectWinner(chitId) {
@@ -186,33 +278,25 @@ export const financeService = {
   },
 
   // LEDGER DIRECT CRUD
-  async createLedgerEntry(payload) {
+  async createLedgerEntry(payload, metadata = null) {
     const { data, error } = await supabase
       .from('ledger')
       .insert([payload])
       .select('*, profiles(*), chits(*)')
       .single()
+    
     if (error) throw error
-    return data
-  },
 
-  async updateLedgerEntry(id, updates) {
-    const { data, error } = await supabase
-      .from('ledger')
-      .update(updates)
-      .eq('id', id)
-      .select('*, profiles(*), chits(*)')
-      .single()
-    if (error) throw error
-    return data
-  },
+    // Log payment metadata to audit logs if provided
+    if (metadata && data) {
+      await supabase.from('audit_logs').insert([{
+        table_name: 'ledger',
+        record_id: data.id,
+        action: JSON.stringify({ type: 'manual_entry', ...metadata })
+      }])
+    }
 
-  async deleteLedgerEntry(id) {
-    const { error } = await supabase
-      .from('ledger')
-      .delete()
-      .eq('id', id)
-    if (error) throw error
+    return data
   },
 
   async getLedgerByDateRange(from, to) {
@@ -224,5 +308,83 @@ export const financeService = {
       .order('created_at', { ascending: false })
     if (error) throw error
     return data || []
+  },
+
+  async getDefaulters() {
+    const today = new Date().toISOString().split('T')[0]
+    
+    try {
+      const { data, error } = await supabase
+        .from('contributions')
+        .select(`
+          *,
+          chit_members (
+            id,
+            user_id,
+            chit_id,
+            profiles (full_name, mobile_number),
+            chits (name)
+          )
+        `)
+        .eq('payment_status', 'pending')
+        .lt('due_date', today)
+
+      if (error) throw error
+
+      // Group by member
+      const memberMap = {}
+      data.forEach(c => {
+        const mid = c.member_id
+        if (!memberMap[mid]) {
+          memberMap[mid] = {
+            member_id: mid,
+            full_name: c.chit_members?.profiles?.full_name,
+            mobile_number: c.chit_members?.profiles?.mobile_number,
+            chit_name: c.chit_members?.chits?.name,
+            overdue_count: 0,
+            total_overdue_amount: 0,
+            installments: []
+          }
+        }
+        memberMap[mid].overdue_count += 1
+        memberMap[mid].total_overdue_amount += Number(c.amount_due)
+        memberMap[mid].installments.push(c)
+      })
+
+      return Object.values(memberMap).sort((a, b) => b.overdue_count - a.overdue_count)
+    } catch (e) {
+      console.error('Error fetching defaulters:', e)
+      return []
+    }
+  },
+
+  async getDailyCollectionReport(date) {
+    const targetDate = date || new Date().toISOString().split('T')[0]
+    const { data, error } = await supabase
+      .from('contributions')
+      .select('*, chit_members(profiles(full_name)), chits(name)')
+      .eq('payment_status', 'paid')
+      .gte('paid_at', targetDate + 'T00:00:00')
+      .lte('paid_at', targetDate + 'T23:59:59')
+    if (error) throw error
+    return data || []
+  },
+
+  async getMonthlyProfitReport() {
+    const { data, error } = await supabase
+      .from('ledger')
+      .select('*')
+      .eq('reference_type', 'commission')
+    if (error) throw error
+    
+    // Group by month
+    const profitMap = {}
+    data.forEach(item => {
+      const month = item.created_at.slice(0, 7) // YYYY-MM
+      profitMap[month] = (profitMap[month] || 0) + Number(item.amount)
+    })
+    
+    return Object.entries(profitMap).map(([month, amount]) => ({ month, amount }))
+      .sort((a, b) => b.month.localeCompare(a.month))
   }
 }

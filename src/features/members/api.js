@@ -1,4 +1,4 @@
-import { supabase } from '../../core/supabase/client'
+import { supabase } from '../../core/lib/supabase'
 
 const MOCK_MEMBERS = [
   {

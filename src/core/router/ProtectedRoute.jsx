@@ -3,7 +3,7 @@ import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../providers/AuthProvider'
 
 const ProtectedRoute = ({ adminOnly = false }) => {
-  const { user, profile, loading, isAdmin } = useAuth()
+  const { user, loading, isAdmin } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -15,15 +15,11 @@ const ProtectedRoute = ({ adminOnly = false }) => {
     )
   }
 
-  if (!user) {
+  if (!user || (adminOnly && !isAdmin)) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  if (adminOnly && profile?.role_type !== 'admin') {
-    return <Navigate to="/login" replace />
-  }
-
-  return <Outlet context={{ user, profile, isAdmin }} />
+  return <Outlet context={{ user, isAdmin }} />
 }
 
 export default ProtectedRoute

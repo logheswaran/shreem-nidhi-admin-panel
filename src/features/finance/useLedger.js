@@ -51,7 +51,7 @@ export const useLedger = () => {
 
   // 3. MUTATIONS
   const addMutation = useMutation({
-    mutationFn: financeService.createLedgerEntry,
+    mutationFn: ({ payload, metadata }) => financeService.createLedgerEntry(payload, metadata),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ledger'] })
       toast.success('Ledger entry recorded')
@@ -91,7 +91,7 @@ export const useLedger = () => {
     loading,
     error,
     stats,
-    addEntry: (payload) => addMutation.mutateAsync(payload),
+    addEntry: (data) => addMutation.mutateAsync(data),
     editEntry: (id, updates) => editMutation.mutateAsync({ id, updates }),
     removeEntry: (id) => removeMutation.mutateAsync(id),
     refetch: () => queryClient.invalidateQueries({ queryKey: ['ledger'] })

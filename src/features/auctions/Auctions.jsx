@@ -6,6 +6,9 @@ import DataTable from '../../shared/components/ui/DataTable'
 import StatusBadge from '../../shared/components/ui/StatusBadge'
 import Modal from '../../shared/components/ui/Modal'
 import ConfirmDialog from '../../shared/components/ui/ConfirmDialog'
+import LiveAuctionPanel from './components/LiveAuctionPanel'
+import toast from 'react-hot-toast'
+import { supabase } from '../../core/lib/supabase'
 
 const Auctions = () => {
   const { data: allChits = [] } = useChits()
@@ -21,6 +24,8 @@ const Auctions = () => {
   
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [confirmClose, setConfirmClose] = useState({ isOpen: false, round: null })
+  const [confirmCancel, setConfirmCancel] = useState({ isOpen: false, round: null })
+  const [noBidsWarning, setNoBidsWarning] = useState({ isOpen: false, round: null })
 
   const handleAuditBids = (round) => {
     setSelectedRoundId(round.id)
@@ -32,10 +37,47 @@ const Auctions = () => {
     try {
       await closeAuction(confirmClose.round.id)
       setConfirmClose({ isOpen: false, round: null })
+      setNoBidsWarning({ isOpen: false, round: null })
       setIsModalOpen(false)
     } catch (error) {
       // toast handled in hook
     }
+  }
+
+  const handleCancelAuction = async () => {
+    if (!confirmCancel.round) return
+    try {
+      toast.loading('Cancelling auction...', { id: 'cancel' })
+      const { error } = await supabase.rpc('admin_cancel_auction', { p_auction_id: confirmCancel.round.id })
+      if (error) throw error
+      toast.success('Auction Cancelled!', { id: 'cancel' })
+      setConfirmCancel({ isOpen: false, round: null })
+      setIsModalOpen(false)
+      // Ideally trigger a refetch here
+    } catch (error) {
+       toast.error(error.message || 'Failed to cancel', { id: 'cancel' })
+    }
+  }
+
+  const handleExecuteRequest = (numBids) => {
+    const roundToClose = rounds.find(r => r.id === selectedRoundId)
+    if (numBids === 0) {
+      setNoBidsWarning({ isOpen: true, round: roundToClose })
+    } else {
+      setConfirmClose({ isOpen: true, round: roundToClose })
+    }
+  }
+
+  const activeChit = auctionChits.find(c => c.id === activeChitId)
+  const hasOpenAuction = rounds.some(r => r.status === 'open')
+
+  const handleOpenAuction = () => {
+    if (hasOpenAuction) {
+      toast.error('Sequence Lock: Close the current open auction before starting a new one.')
+      return
+    }
+    // Launch logic here or open a form...
+    toast.error('Launch form not connected yet')
   }
 
   const columns = [
@@ -96,7 +138,10 @@ const Auctions = () => {
         </div>
         <div className="flex gap-4">
            {auctionChits.length > 0 && (
-             <button className="heritage-gradient text-white px-10 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl hover:brightness-110 active:scale-95 transition-all flex items-center gap-3">
+             <button 
+               onClick={handleOpenAuction}
+               className={`heritage-gradient text-white px-10 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl hover:brightness-110 active:scale-95 transition-all flex items-center gap-3 ${hasOpenAuction ? 'opacity-50 cursor-not-allowed' : ''}`}
+             >
                <Plus className="w-4 h-4" /> Open New Window
              </button>
            )}
@@ -125,66 +170,15 @@ const Auctions = () => {
         title="Sealed Bid Audit"
         maxWidth="max-w-4xl"
       >
-        {selectedRoundId && (
-          <div className="space-y-10">
-            {rounds.find(r => r.id === selectedRoundId) && (
-              <>
-                <div className="p-8 bg-brand-ivory rounded-[2.5rem] border border-brand-gold/10 flex justify-between items-center shadow-inner">
-                   <div className="flex items-center gap-5">
-                      <div className="w-14 h-14 bg-white rounded-2xl flex items-center justify-center shadow-sm border border-brand-gold/5">
-                        <History className="text-brand-gold w-7 h-7" />
-                      </div>
-                      <div>
-                        <h5 className="font-headline font-bold text-2xl text-brand-navy">Cycle Month {rounds.find(r => r.id === selectedRoundId).month_number}</h5>
-                        <p className="text-[10px] font-black uppercase tracking-widest text-brand-gold/60">Bidding Window Audit</p>
-                      </div>
-                   </div>
-                   <StatusBadge status={rounds.find(r => r.id === selectedRoundId).status} />
-                </div>
-
-                <div className="space-y-6">
-                   <div className="flex justify-between items-center px-2">
-                     <h6 className="text-[10px] font-black uppercase tracking-[0.25em] text-brand-text/30">Submitted Participation ({bids.length})</h6>
-                     {rounds.find(r => r.id === selectedRoundId).status === 'open' && (
-                       <button 
-                         onClick={() => setConfirmClose({ isOpen: true, round: rounds.find(r => r.id === selectedRoundId) })}
-                         className="bg-brand-navy text-white px-6 py-2.5 rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-brand-navy-light transition-all flex items-center gap-2 shadow-md"
-                       >
-                         <GavelIcon className="w-3.5 h-3.5 text-brand-gold" /> Execute laureate Admission
-                       </button>
-                     )}
-                   </div>
-                   <DataTable columns={bidColumns} data={bids} loading={bidsLoading} />
-                </div>
-
-                {rounds.find(r => r.id === selectedRoundId).status === 'closed' && (
-                  <div className="bg-brand-navy/5 p-10 rounded-[3rem] border border-brand-navy/5 flex flex-col gap-6 items-center text-center">
-                     <div className="w-20 h-20 heritage-gradient rounded-full flex items-center justify-center text-white shadow-2xl border-4 border-white mb-2">
-                       <Trophy className="w-10 h-10" />
-                     </div>
-                     <div>
-                       <p className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-gold mb-2">Cycle Laureate</p>
-                       <h4 className="text-4xl font-headline font-bold text-brand-navy tracking-tight">₹{Number(rounds.find(r => r.id === selectedRoundId).winning_bid_amount).toLocaleString()} Acceptance</h4>
-                       <p className="text-xs text-brand-text/40 mt-4 leading-relaxed max-w-lg mx-auto italic font-body">
-                         This round was finalized on {new Date(rounds.find(r => r.id === selectedRoundId).closed_at).toLocaleString()}. 
-                         Commission was deducted and a dividend of <span className="text-brand-gold font-bold">₹{Number(rounds.find(r => r.id === selectedRoundId).dividend_amount).toLocaleString()}</span> was distributed to all non-laureate participants.
-                       </p>
-                     </div>
-                     <div className="flex gap-4 mt-4 w-full justify-center">
-                        <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-brand-gold/5">
-                          <p className="text-[8px] font-bold text-brand-text/40 uppercase">Commission</p>
-                          <p className="text-sm font-bold text-brand-navy">₹{Number(rounds.find(r => r.id === selectedRoundId).commission_amount).toLocaleString()}</p>
-                        </div>
-                        <div className="bg-white px-6 py-3 rounded-2xl shadow-sm border border-brand-gold/5">
-                          <p className="text-[8px] font-bold text-brand-text/40 uppercase">Net Dividend</p>
-                          <p className="text-sm font-bold text-brand-navy">₹{Number(rounds.find(r => r.id === selectedRoundId).dividend_amount).toLocaleString()}</p>
-                        </div>
-                     </div>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+        {selectedRoundId && activeChit && (
+          <LiveAuctionPanel 
+            round={rounds.find(r => r.id === selectedRoundId)} 
+            chit={activeChit} 
+            initialBids={bids} 
+            loading={bidsLoading} 
+            onExecute={handleExecuteRequest}
+            onCancel={() => setConfirmCancel({ isOpen: true, round: rounds.find(r => r.id === selectedRoundId) })}
+          />
         )}
       </Modal>
 
@@ -198,8 +192,35 @@ const Auctions = () => {
         confirmText="Execute"
         loading={isProcessing}
       />
+
+      <ConfirmDialog 
+        isOpen={noBidsWarning.isOpen}
+        onClose={() => setNoBidsWarning({ isOpen: false, round: null })}
+        onConfirm={() => {
+           // We would call select_random_winner RPC here if it existed.
+           // For traditional, Admin will run this manually or wait.
+           toast.error('No random winner selected: Action must be handled manually.')
+           setNoBidsWarning({ isOpen: false, round: null })
+        }}
+        title="⚠ No Bids Received"
+        message="No bids have been placed for this cycle. You can either wait for bids or select a winner manually using the Random Draw."
+        intent="danger"
+        confirmText="Select random winner instead"
+        loading={isProcessing}
+      />
+
+      <ConfirmDialog 
+        isOpen={confirmCancel.isOpen}
+        onClose={() => setConfirmCancel({ isOpen: false, round: null })}
+        onConfirm={handleCancelAuction}
+        title="Admin Override: Cancel Auction"
+        message="DANGER: This will instantly close the auction without selecting a winner or distributing dividends. This action is irreversible and should only be used in emergencies."
+        intent="danger"
+        confirmText="Force Cancel"
+      />
     </div>
   )
 }
+
 
 export default Auctions

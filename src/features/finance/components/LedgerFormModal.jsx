@@ -10,7 +10,9 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
     amount: '',
     reference_type: '',
     notes: '',
-    created_at: new Date().toISOString().split('T')[0]
+    created_at: new Date().toISOString().split('T')[0],
+    payment_mode: 'Cash',
+    payment_ref: ''
   })
 
   useEffect(() => {
@@ -22,7 +24,9 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
           amount: Math.abs(initialData.amount) || '',
           reference_type: initialData.reference_type || '',
           notes: initialData.notes || '',
-          created_at: new Date(initialData.created_at).toISOString().split('T')[0]
+          created_at: new Date(initialData.created_at).toISOString().split('T')[0],
+          payment_mode: initialData.payment_mode || 'Cash',
+          payment_ref: initialData.payment_ref || ''
         })
       } else {
         setFormData({
@@ -31,7 +35,9 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
           amount: '',
           reference_type: '',
           notes: '',
-          created_at: new Date().toISOString().split('T')[0]
+          created_at: new Date().toISOString().split('T')[0],
+          payment_mode: 'Cash',
+          payment_ref: ''
         })
       }
     }
@@ -49,7 +55,12 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
       return
     }
     
-    onSubmit(formData)
+    
+    const { payment_mode, payment_ref, ...payload } = formData
+    onSubmit({ 
+      payload, 
+      metadata: { mode: payment_mode, ref: payment_ref } 
+    })
   }
 
   return (
@@ -165,7 +176,7 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
               </select>
             </div>
           </div>
-
+          
           {/* Notes */}
           <div className="space-y-2 md:col-span-2">
             <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1">Audit Notes</label>
@@ -180,6 +191,42 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
                 className="w-full bg-brand-ivory/50 border-2 border-brand-gold/5 focus:border-brand-gold/30 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-body focus:outline-none transition-all placeholder:text-brand-text/20 resize-none"
               />
             </div>
+          </div>
+
+          {/* Payment Mode (Gap 4) */}
+          <div className="space-y-4 md:col-span-2 pt-4 border-t border-brand-gold/5">
+             <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1 block">Institutional Payment Mode</label>
+             <div className="flex flex-wrap gap-2">
+                {['Cash', 'UPI', 'Bank Transfer', 'Cheque'].map(mode => (
+                  <button
+                    key={mode}
+                    type="button"
+                    onClick={() => setFormData(prev => ({ ...prev, payment_mode: mode }))}
+                    className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
+                      formData.payment_mode === mode 
+                        ? 'bg-brand-navy text-white shadow-lg' 
+                        : 'bg-white border border-brand-gold/10 text-brand-navy hover:bg-brand-gold/5'
+                    }`}
+                  >
+                    {mode}
+                  </button>
+                ))}
+             </div>
+
+             {formData.payment_mode !== 'Cash' && (
+                <div className="animate-in slide-in-from-top duration-300">
+                   <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 ml-1 block mb-2">
+                     {formData.payment_mode === 'Cheque' ? 'Instrument Number' : 'Transaction / Reference ID'}
+                   </label>
+                   <input 
+                     name="payment_ref"
+                     value={formData.payment_ref}
+                     onChange={handleChange}
+                     className="w-full bg-brand-ivory/30 border border-brand-gold/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-gold/30 font-bold text-brand-navy"
+                     placeholder={`Enter ${formData.payment_mode} reference...`}
+                   />
+                </div>
+             )}
           </div>
         </div>
 

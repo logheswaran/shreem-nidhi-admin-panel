@@ -50,7 +50,7 @@ const DateRangePicker = ({ startDate, endDate, onChange }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-4 left-0 z-[100] bg-white dark:bg-[#16213E] border border-brand-gold/10 rounded-3xl shadow-2xl p-6 min-w-[320px] animate-in fade-in zoom-in duration-200">
+        <div className="absolute top-full mt-4 left-0 z-50 bg-white dark:bg-[#16213E] border border-brand-gold/10 rounded-3xl shadow-2xl p-6 min-w-[320px] animate-in fade-in zoom-in duration-200">
           <div className="flex justify-between items-center mb-6">
             <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 hover:bg-brand-gold/5 rounded-full text-brand-gold">
               <ChevronLeft className="w-4 h-4" />
