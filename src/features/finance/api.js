@@ -66,44 +66,45 @@ const MOCK_LEDGER = [
 export const financeService = {
   // READS
   async getContributions(chitId, month) {
-    try {
-      let query = supabase
-        .from('contributions')
-        .select('*, chit_members(*, profiles(*))')
-      
-      if (chitId) query = query.eq('chit_id', chitId)
-      if (month) query = query.eq('month_number', month)
-      
-      const { data, error } = await query.order('month_number', { ascending: false })
-      if (error) throw error
-      return data || []
-    } catch (e) {
-      return []
+    let query = supabase
+      .from('contributions')
+      .select('*, chit_members(*, profiles(*))')
+    
+    if (chitId) query = query.eq('chit_id', chitId)
+    if (month) query = query.eq('month_number', month)
+    
+    const { data, error } = await query.order('month_number', { ascending: false })
+    if (error) {
+      console.error('❌ Error fetching contributions:', error)
+      throw error
     }
+    return data || []
   },
 
   async getLoans() {
-    try {
-      const { data, error } = await supabase
-        .from('loans')
-        .select('*, chit_members(*, profiles(*)), chits(*)')
-        .order('created_at', { ascending: false })
-      if (error) throw error
-      return data || []
-    } catch (e) {
-      return []
+    console.log('📡 Fetching active loans...')
+    const { data, error } = await supabase
+      .from('loans')
+      .select('*, chit_members(*, profiles(*)), chits(*)')
+      .order('created_at', { ascending: false })
+    if (error) {
+      console.error('❌ Error fetching loans:', error)
+      throw error
     }
+    return data || []
   },
 
   async getLedger() {
     const isDemo = typeof window !== 'undefined' && localStorage.getItem('sreem_nidhi_demo') === 'true'
     const isPro = typeof window !== 'undefined' && localStorage.getItem('sreem_nidhi_pro_mode') === 'true'
 
+    console.log('📡 Fetching all ledger records...')
     try {
       const { data, error } = await supabase
         .from('ledger')
         .select('*, profiles(*), chits(*)')
         .order('created_at', { ascending: false })
+      
       if (error) throw error
       
       // PRO MODE: Show exact DB state
@@ -115,10 +116,8 @@ export const financeService = {
       
       return data || []
     } catch (e) {
-      if (isPro) {
-        console.error('PRO_MODE SUPABASE ERROR:', e)
-        return []
-      }
+      console.error('❌ Error fetching ledger:', e)
+      if (isPro) return []
       if (isDemo) return MOCK_LEDGER
       return []
     }

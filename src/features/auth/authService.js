@@ -118,23 +118,17 @@ export const stepOneSendOtp = async (phone, pin) => {
 export const stepTwoVerifyOtp = async (phone, otp, pin) => {
   const session = await verifyOtp(phone, otp)
 
-  // Now we have a session — RLS allows us to read our own profile
-  const { data: profiles, error } = await supabase
-    .from('profiles')
-    .select('id, full_name, mobile_number, role_type, pin_hash')
-    .eq('mobile_number', phone)
-    .limit(1)
+  // 🛡️ Use RPC to bypass RLS issues during the login phase
+  const { data: profile, error } = await supabase.rpc('get_profile_by_phone', { 
+    p_phone: phone 
+  })
 
-  console.log('Profile after OTP verify:', { profiles, error })
-
-  if (error || !profiles || profiles.length === 0) {
+  if (error || !profile) {
     await supabase.auth.signOut()
     throw new Error('Profile not found. Contact admin.')
   }
 
-  const profile = profiles[0]
-
-  // If RPC was missing in step 1, verify PIN now (we have the hash)
+  // 🛡️ Verify PIN against the profile we just fetched
   if (pin) {
     const enteredHash = await hashPin(pin)
     if (enteredHash !== profile.pin_hash) {
@@ -147,6 +141,14 @@ export const stepTwoVerifyOtp = async (phone, otp, pin) => {
     await supabase.auth.signOut()
     throw new Error('Access denied. This panel is for admin accounts only.')
   }
+
+  // 🚀 CACHE profile locally for instant reloads
+  localStorage.setItem('sn_profile_cache', JSON.stringify({
+    id: profile.id,
+    full_name: profile.full_name,
+    mobile_number: profile.mobile_number,
+    role_type: profile.role_type
+  }))
 
   return { session, profile }
 }
