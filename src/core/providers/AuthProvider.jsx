@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react'
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react'
 import { supabase } from '../lib/supabase'
+import toast from 'react-hot-toast'
 
 const AuthContext = createContext(null)
 
@@ -8,7 +9,7 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    // Restore existing Supabase session on page load/refresh
+    // 1. Initial Session Recovery
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (session) {
         loadProfile(session)
@@ -17,7 +18,7 @@ export const AuthProvider = ({ children }) => {
       }
     })
 
-    // Listen for auth state changes (login, logout, token refresh)
+    // 2. Real-time Auth Listeners
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         if (session) {
@@ -25,6 +26,7 @@ export const AuthProvider = ({ children }) => {
         } else {
           setUser(null)
           setLoading(false)
+          localStorage.removeItem('sn_profile_cache')
         }
       }
     )
@@ -33,26 +35,51 @@ export const AuthProvider = ({ children }) => {
   }, [])
 
   const loadProfile = async (session) => {
+    setLoading(true) 
     try {
-      // Get phone from session user
-      const phone = session.user?.phone
+      const userId = session?.user?.id
+      const phone = session?.user?.phone
 
-      if (phone) {
-        const { data: profiles } = await supabase
-          .from('profiles')
-          .select('id, full_name, mobile_number, role_type')
-          .eq('mobile_number', phone)
-          .limit(1)
+      if (!userId) {
+        setLoading(false)
+        return
+      }
 
-        if (profiles && profiles.length > 0) {
-          setUser({
-            ...profiles[0],
-            accessToken: session.access_token
-          })
+      // Format phone safely
+      const formattedPhone = phone ? (phone.startsWith('+') ? phone : `+${phone}`) : null
+
+      // 1. Try Local Storage Cache (Instant)
+      const cached = localStorage.getItem('sn_profile_cache')
+      if (cached && formattedPhone) {
+        const profile = JSON.parse(cached)
+        if (profile.mobile_number === formattedPhone) {
+          setUser({ ...profile, accessToken: session.access_token })
+          setLoading(false)
+          return
+        }
+      }
+
+      // 2. Fallback: Phone-based RPC (Proven to bypass RLS issues)
+      if (formattedPhone) {
+        // Timeout safety
+        const rpcPromise = supabase.rpc('get_profile_by_phone', { p_phone: formattedPhone })
+        const timeoutPromise = new Promise((_, reject) => 
+          setTimeout(() => reject(new Error('RPC Timeout')), 5000)
+        )
+
+        try {
+          const { data: profile } = await Promise.race([rpcPromise, timeoutPromise])
+          
+          if (profile) {
+            localStorage.setItem('sn_profile_cache', JSON.stringify(profile))
+            setUser({ ...profile, accessToken: session.access_token })
+          }
+        } catch (e) {
+          console.error('loadProfile: RPC Critical Failure (likely hang):', e.message)
         }
       }
     } catch (err) {
-      console.error('Failed to load profile:', err)
+      console.error('loadProfile: EXCEPTION caught:', err)
     } finally {
       setLoading(false)
     }
@@ -60,6 +87,7 @@ export const AuthProvider = ({ children }) => {
 
   const logout = async () => {
     await supabase.auth.signOut()
+    localStorage.removeItem('sn_profile_cache')
     setUser(null)
   }
 
