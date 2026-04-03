@@ -13,24 +13,31 @@ import {
   UserCircle,
   LogOut,
   ChevronRight,
-  X
+  X,
+  AlertTriangle,
+  BarChart3,
+  Bell,
+  Settings
 } from 'lucide-react'
 import { useAuth } from '../../../core/providers/AuthProvider'
 import { motion } from 'framer-motion'
 
 const menuItems = [
   { path: '/', label: 'Dashboard', icon: LayoutDashboard },
-  { path: '/chits', label: 'Chits', icon: Coins },
-  { path: '/applications', label: 'Applications', icon: UserPlus },
-  { path: '/operations', label: 'Monthly Operations', icon: CalendarDays },
+  { path: '/chits', label: 'Chit Groups', icon: Coins },
   { path: '/members', label: 'Members', icon: Users },
-  { path: '/ledger', label: 'Ledger & Audit', icon: History },
-  { path: '/payouts', label: 'Maturity Payouts', icon: BadgeIndianRupee },
+  { path: '/members/applications', label: 'Applications', icon: UserPlus },
+  { path: '/payments', label: 'Payments', icon: BadgeIndianRupee },
   { path: '/auctions', label: 'Auctions', icon: Gavel },
+  { path: '/ledger', label: 'Ledger', icon: History },
+  { path: '/risk', label: 'Risk & Defaulters', icon: AlertTriangle },
+  { path: '/reports', label: 'Reports', icon: BarChart3 },
+  { path: '/notifications', label: 'Notifications', icon: Bell },
+  { path: '/admin', label: 'Admin Controls', icon: Settings },
 ]
 
 const Sidebar = ({ isOpen, setIsOpen }) => {
-  const { profile, signOut } = useAuth()
+  const { user: profile, logout: signOut } = useAuth()
   const navigate = useNavigate()
 
   const sidebarVariants = {
@@ -77,6 +84,7 @@ const Sidebar = ({ isOpen, setIsOpen }) => {
             <NavLink
               key={item.path}
               to={item.path}
+              end={item.path === '/members' || item.path === '/'}
               onClick={() => window.innerWidth < 1024 && setIsOpen(false)}
               className={({ isActive }) => `
                 flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group

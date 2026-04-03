@@ -4,7 +4,8 @@ import { useAuth } from '../../core/providers/AuthProvider'
 import toast from 'react-hot-toast'
 
 const Profile = () => {
-  const { user, profile, signOut } = useAuth()
+  const { user, logout: signOut } = useAuth()
+  const profile = user // Map for compatibility
 
   const handleLogout = async () => {
     try {

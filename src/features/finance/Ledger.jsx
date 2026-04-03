@@ -1,12 +1,12 @@
 import React, { useState, useMemo, useEffect } from 'react'
-import { 
-  Plus, 
-  Search, 
-  Download, 
-  History, 
-  ArrowUpRight, 
-  ArrowDownLeft, 
-  Filter, 
+import {
+  Plus,
+  Search,
+  Download,
+  History,
+  ArrowUpRight,
+  ArrowDownLeft,
+  Filter,
   X,
   CreditCard,
   Wallet,
@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { useLedger } from './useLedger'
 import { useMembers } from '../members/useMembers'
+import { adminService } from '../admin/api' // Added for reverse override
 import { useDebounce } from '../../shared/hooks/useDebounce'
 import { useAuth } from '../../core/providers/AuthProvider'
 import DataTable from '../../shared/components/ui/DataTable'
@@ -25,6 +26,7 @@ import LedgerFormModal from './components/LedgerFormModal'
 import LedgerDetailModal from './components/LedgerDetailModal'
 import DateRangePicker from '../../shared/components/ui/DateRangePicker'
 import ConfirmDialog from '../../shared/components/ui/ConfirmDialog'
+import Modal from '../../shared/components/ui/Modal'
 import { exportToCSV, exportToPDF } from '../../shared/utils/exportUtils'
 import toast from 'react-hot-toast'
 import { startOfDay } from 'date-fns'
@@ -44,6 +46,12 @@ const Ledger = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteTargetId, setDeleteTargetId] = useState(null)
+
+  // Overrides
+  const [reverseTarget, setReverseTarget] = useState(null)
+  const [reverseReason, setReverseReason] = useState('')
+  const [reverseConfirmText, setReverseConfirmText] = useState('')
+  const [isReversing, setIsReversing] = useState(false)
 
   const debouncedSearch = useDebounce(searchTerm, 300)
 
@@ -140,7 +148,7 @@ const Ledger = () => {
       header: 'Actions',
       render: (row) => (
         <div className="flex items-center gap-1">
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); setSelectedEntry(row); }}
             className="p-1.5 hover:bg-brand-gold/10 text-brand-gold transition-colors rounded-lg"
             title="Audit Details"
@@ -149,18 +157,32 @@ const Ledger = () => {
           </button>
           {isAdmin && (
             <>
-              <button 
+              <button
                 onClick={(e) => { e.stopPropagation(); setEditingEntry(row); }}
                 className="p-1.5 hover:bg-brand-gold/10 text-brand-gold transition-colors rounded-lg"
                 title="Adjust Entry"
               >
                 <Pencil className="w-3.5 h-3.5" />
               </button>
-              <button 
-                onClick={(e) => { 
-                  e.stopPropagation(); 
+              {row.reference_type === 'contribution' && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setReverseTarget(row);
+                    setReverseReason('');
+                    setReverseConfirmText('');
+                  }}
+                  className="p-1.5 hover:bg-amber-50 text-amber-600 transition-colors rounded-lg"
+                  title="Reverse Payment"
+                >
+                  <ArrowUpRight className="w-3.5 h-3.5 rotate-180" />
+                </button>
+              )}
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
                   setDeleteTargetId(row.id);
-                  setShowDeleteConfirm(true); 
+                  setShowDeleteConfirm(true);
                 }}
                 className="p-1.5 hover:bg-red-50 text-red-500 transition-colors rounded-lg"
                 title="Delete Entry"
@@ -174,19 +196,22 @@ const Ledger = () => {
     }
   ]
 
-  const handleCreateEntry = async (data) => {
+  const handleCreateEntry = async ({ payload, metadata }) => {
     try {
-      const member = members.find(m => m.user_id === data.user_id);
-      await addEntry({ ...data, full_name: member?.profiles?.full_name });
+      const member = members.find(m => m.user_id === payload.user_id);
+      await addEntry({ 
+        payload: { ...payload, full_name: member?.profiles?.full_name }, 
+        metadata 
+      });
       setShowAddModal(false);
-    } catch (err) {}
+    } catch (err) { }
   }
 
-  const handleUpdateEntry = async (data) => {
+  const handleUpdateEntry = async ({ payload }) => {
     try {
-      await editEntry(editingEntry.id, data);
+      await editEntry(editingEntry.id, payload);
       setEditingEntry(null);
-    } catch (err) {}
+    } catch (err) { }
   }
 
   const handleDeleteEntry = async () => {
@@ -194,7 +219,24 @@ const Ledger = () => {
       await removeEntry(deleteTargetId);
       setShowDeleteConfirm(false);
       setDeleteTargetId(null);
-    } catch (err) {}
+    } catch (err) { }
+  }
+
+  const handleReversePayment = async () => {
+    if (reverseConfirmText !== 'REVERSE') return
+    try {
+      setIsReversing(true)
+      toast.loading('Processing financial reversal...', { id: 'reverse' })
+      await adminService.reversePayment(reverseTarget.id, reverseReason)
+      toast.success('Payment Reverted & Voided successfully', { id: 'reverse' })
+      setReverseTarget(null)
+      // Ideally refresh ledger here
+      window.location.reload() // Quick fix to ensure UI integrity
+    } catch (err) {
+      toast.error(err.message || 'Legacy reversal failed', { id: 'reverse' })
+    } finally {
+      setIsReversing(false)
+    }
   }
 
   const handleCSVExport = () => {
@@ -245,10 +287,10 @@ const Ledger = () => {
         </div>
         <div className="flex gap-4">
           <div className="flex bg-white rounded-full p-1 border border-brand-gold/10 shadow-sm">
-             <button onClick={handleCSVExport} className="px-4 py-2 text-[8px] font-black uppercase tracking-widest text-brand-navy hover:bg-brand-gold/5 rounded-full transition-all">CSV</button>
-             <button onClick={handlePDFExport} className="px-4 py-2 text-[8px] font-black uppercase tracking-widest text-brand-navy hover:bg-brand-gold/5 rounded-full transition-all">PDF Report</button>
+            <button onClick={handleCSVExport} className="px-4 py-2 text-[8px] font-black uppercase tracking-widest text-brand-navy hover:bg-brand-gold/5 rounded-full transition-all">CSV</button>
+            <button onClick={handlePDFExport} className="px-4 py-2 text-[8px] font-black uppercase tracking-widest text-brand-navy hover:bg-brand-gold/5 rounded-full transition-all">PDF Report</button>
           </div>
-          <button 
+          <button
             onClick={() => setShowAddModal(true)}
             className="heritage-gradient px-8 py-3.5 text-white text-[10px] font-black uppercase tracking-widest rounded-full flex items-center gap-3 shadow-xl hover:brightness-110 transition-all active:scale-95"
           >
@@ -277,12 +319,12 @@ const Ledger = () => {
       </div>
 
       {/* Advanced Filtering */}
-      <div className="bg-white/40 backdrop-blur-xl p-6 rounded-[2.5rem] border border-brand-gold/5 shadow-sm mb-10">
+      <div className="relative z-10 bg-white/40 backdrop-blur-xl p-6 rounded-[2.5rem] border border-brand-gold/5 shadow-sm mb-10">
         <div className="flex flex-col lg:flex-row gap-6 items-center">
           {/* Main Search */}
           <div className="relative group w-full lg:flex-1">
             <Search className="absolute left-6 top-1/2 -translate-y-1/2 text-brand-text/20 group-focus-within:text-brand-gold transition-colors w-5 h-5" />
-            <input 
+            <input
               className="w-full bg-white border-2 border-brand-gold/5 rounded-2xl py-4 pl-16 pr-8 text-sm font-body focus:ring-4 focus:ring-brand-gold/10 focus:border-brand-gold/30 focus:outline-none transition-all placeholder:text-brand-text/10 shadow-sm"
               placeholder="Search Ref ID, Member Identity, or Security Protocol..."
               type="text"
@@ -298,11 +340,10 @@ const Ledger = () => {
                 <button
                   key={type}
                   onClick={() => setTypeFilter(type)}
-                  className={`px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all ${
-                    typeFilter === type 
-                      ? 'bg-white text-brand-navy shadow-sm' 
+                  className={`px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all ${typeFilter === type
+                      ? 'bg-white text-brand-navy shadow-sm'
                       : 'text-brand-text/40 hover:text-brand-navy'
-                  }`}
+                    }`}
                 >
                   {type}
                 </button>
@@ -310,9 +351,9 @@ const Ledger = () => {
             </div>
 
             {/* Date Range (Prompt 5) */}
-            <DateRangePicker 
-              startDate={dateFrom} 
-              endDate={dateTo} 
+            <DateRangePicker
+              startDate={dateFrom}
+              endDate={dateTo}
               onChange={(start, end) => {
                 setDateFrom(start);
                 setDateTo(end);
@@ -322,19 +363,19 @@ const Ledger = () => {
         </div>
       </div>
 
-      <div className="soft-glow bg-white/20 rounded-[2.5rem] border border-brand-gold/5 overflow-hidden">
-        <DataTable 
-          columns={columns} 
-          data={filteredLedger} 
-          loading={loading} 
+      <div className="soft-glow bg-white/20 rounded-[2.5rem] border border-brand-gold/5 overflow-visible">
+        <DataTable
+          columns={columns}
+          data={filteredLedger}
+          loading={loading}
           onRowClick={(row) => setSelectedEntry(row)}
         />
       </div>
 
       <footer className="mt-16 text-center">
         <div className="inline-flex items-center gap-4 px-8 py-3.5 bg-brand-navy/5 rounded-full border border-brand-gold/10 opacity-60 grayscale hover:grayscale-0 transition-all duration-1000">
-           <ShieldCheck className="w-5 h-5 text-brand-gold" />
-           <span className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-navy">Cryptographic Proof Verified at Institutional Grade</span>
+          <ShieldCheck className="w-5 h-5 text-brand-gold" />
+          <span className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-navy">Cryptographic Proof Verified at Institutional Grade</span>
         </div>
       </footer>
 
@@ -368,6 +409,60 @@ const Ledger = () => {
         description="This action will expunge this financial entry from the immutable ledger. This protocol modification is recorded for audit."
         intent="danger"
       />
+
+      <Modal
+        isOpen={!!reverseTarget}
+        onClose={() => setReverseTarget(null)}
+        title="Admin Override: Revert Entry"
+      >
+        <div className="space-y-6">
+          <div className="p-6 bg-amber-50 rounded-3xl border border-amber-100 flex items-start gap-4">
+            <Activity className="w-6 h-6 text-amber-600 shrink-0" />
+            <div>
+              <p className="text-xs text-amber-900 leading-relaxed font-bold">Reversal Audit Trail</p>
+              <p className="text-[10px] text-amber-800 leading-relaxed mt-1">
+                Reversing Ref: {reverseTarget?.id.slice(0, 12)} for {reverseTarget?.profiles?.full_name}.
+                This will credited back the member's outstanding balance & void the contribution record.
+              </p>
+            </div>
+          </div>
+
+          <div className="space-y-4 font-body">
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/60 mb-2 block">Reason for Override</label>
+              <textarea
+                className="w-full bg-white border border-brand-gold/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-gold/30 h-24"
+                placeholder="Describe the error leading to this reversal..."
+                value={reverseReason}
+                onChange={(e) => setReverseReason(e.target.value)}
+              />
+            </div>
+
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/60 mb-2 block">Confirm Sequence</label>
+              <p className="text-[9px] mb-2 opacity-50 italic">Type "REVERSE" to authorize institutional reversal.</p>
+              <input
+                type="text"
+                className="w-full bg-white border border-brand-gold/10 rounded-xl px-4 py-3 text-sm font-bold uppercase focus:outline-none focus:border-brand-gold/30"
+                placeholder="Sequence Match"
+                value={reverseConfirmText}
+                onChange={(e) => setReverseConfirmText(e.target.value)}
+              />
+            </div>
+          </div>
+
+          <button
+            onClick={handleReversePayment}
+            disabled={reverseConfirmText !== 'REVERSE' || isReversing}
+            className={`w-full font-black uppercase tracking-[0.2em] py-5 rounded-2xl transition-all shadow-xl flex items-center justify-center gap-3 active:scale-[0.98] ${reverseConfirmText === 'REVERSE'
+                ? 'bg-red-600 text-white shadow-red-600/20 hover:bg-red-700'
+                : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+              }`}
+          >
+            Commit Reversal <ShieldCheck className="w-5 h-5" />
+          </button>
+        </div>
+      </Modal>
     </div>
   )
 }
