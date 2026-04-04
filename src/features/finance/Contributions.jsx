@@ -52,7 +52,7 @@ const Contributions = () => {
             {row.chit_members?.profiles?.full_name?.[0] || 'A'}
           </div>
           <div className="flex flex-col">
-            <span className="font-headline font-bold text-brand-navy leading-none mb-1">{row.chit_members?.profiles?.full_name}</span>
+            <span className="font-headline font-bold text-[#2B2620] leading-none mb-1">{row.chit_members?.profiles?.full_name}</span>
             <span className="text-[10px] text-brand-text/30 font-bold tracking-widest uppercase">ID: {row.member_id.slice(0, 6).toUpperCase()}</span>
           </div>
         </div>
@@ -69,7 +69,7 @@ const Contributions = () => {
     },
     { 
       header: 'Installment', 
-      render: (row) => <span className="font-bold text-brand-navy">₹{Number(row.amount).toLocaleString()}</span> 
+      render: (row) => <span className="font-bold text-[#2B2620]">₹{Number(row.amount).toLocaleString()}</span> 
     },
     { header: 'Status', render: (row) => <StatusBadge status={row.status} /> },
     { 
@@ -90,7 +90,7 @@ const Contributions = () => {
   return (
     <div className="animate-in fade-in duration-700">
       <header className="mb-10">
-        <h2 className="text-4xl font-headline font-bold text-brand-navy">Contribution Registry</h2>
+        <h2 className="text-4xl font-headline font-bold text-[#2B2620]">Contribution Registry</h2>
         <p className="text-on-surface-variant font-body mt-2 opacity-70">Orchestrate premium installments and verify trust compliance.</p>
       </header>
 
@@ -100,7 +100,7 @@ const Contributions = () => {
            <div className="relative flex-1 group">
              <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-text/20 group-focus-within:text-brand-gold transition-colors w-4 h-4" />
              <select 
-               className="w-full bg-white border-2 border-brand-gold/5 rounded-full pl-12 pr-6 py-3.5 text-xs font-bold text-brand-navy focus:outline-none focus:border-brand-gold/30 transition-all appearance-none cursor-pointer shadow-sm"
+               className="w-full bg-white border-2 border-brand-gold/5 rounded-full pl-12 pr-6 py-3.5 text-xs font-bold text-[#2B2620] focus:outline-none focus:border-brand-gold/30 transition-all appearance-none cursor-pointer shadow-sm"
                value={filters.chitId}
                onChange={(e) => setFilters({...filters, chitId: e.target.value})}
              >
@@ -114,7 +114,7 @@ const Contributions = () => {
              <input 
                type="number" 
                placeholder="Month #"
-               className="w-full md:w-40 bg-white border-2 border-brand-gold/5 rounded-full pl-12 pr-6 py-3.5 text-xs font-bold text-brand-navy focus:outline-none focus:border-brand-gold/30 transition-all shadow-sm"
+               className="w-full md:w-40 bg-white border-2 border-brand-gold/5 rounded-full pl-12 pr-6 py-3.5 text-xs font-bold text-[#2B2620] focus:outline-none focus:border-brand-gold/30 transition-all shadow-sm"
                value={filters.month}
                onChange={(e) => setFilters({...filters, month: e.target.value})}
              />
@@ -125,7 +125,7 @@ const Contributions = () => {
 
         <div className="flex items-center gap-10 px-6">
            <div className="flex flex-col items-center">
-             <span className="text-xl font-headline font-bold text-brand-navy">{contributions.length}</span>
+             <span className="text-xl font-headline font-bold text-[#2B2620]">{contributions.length}</span>
              <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-gold opacity-50 mt-1">Delegates</span>
            </div>
            <div className="flex flex-col items-center">

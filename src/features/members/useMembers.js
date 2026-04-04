@@ -55,13 +55,51 @@ export const useMembers = () => {
     }
   })
 
+  // 5. MEMBER STATS QUERY
+  const { data: stats, isLoading: statsLoading } = useQuery({
+    queryKey: ['member-stats'],
+    queryFn: () => memberService.getMemberStats(),
+    staleTime: 1000 * 60 * 2,
+  })
+
+  // 6. RISK ENGINE UTILITY
+  const computeRisk = (member) => {
+    if (!member) return { level: 'LOW', reason: 'No data' }
+    
+    const monthsElapsed = Math.floor((Date.now() - new Date(member.joined_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
+    const monthsPaid = member.months_paid || 0
+    const missed = Math.max(0, monthsElapsed - monthsPaid)
+    
+    if (missed >= 3 || member.status === 'defaulter') return { 
+      level: 'HIGH', 
+      reason: `${missed} payments missed. Protocol risk critical.` 
+    }
+    if (missed >= 1) return { 
+      level: 'MEDIUM', 
+      reason: `${missed} payment delay detected. Monitoring active.` 
+    }
+    
+    return { level: 'LOW', reason: 'Payment history perfect. High reliability.' }
+  }
+
   return {
-    members,
+    members: members.map(m => ({ ...m, risk: computeRisk(m) })),
+    stats,
+    statsLoading,
     loading,
     error,
     addMember: (payload) => addMutation.mutateAsync(payload),
     editMember: (id, updates) => editMutation.mutateAsync({ id, updates }),
     removeMember: (id) => removeMutation.mutateAsync(id),
-    refetch: () => queryClient.invalidateQueries({ queryKey: ['members'] })
+    syncDefaulters: async () => {
+      const risky = members.filter(m => computeRisk(m).level === 'HIGH' && m.status !== 'defaulter')
+      for (const m of risky) {
+        await editMutation.mutateAsync({ id: m.id, updates: { status: 'defaulter' } })
+      }
+    },
+    refetch: () => {
+      queryClient.invalidateQueries({ queryKey: ['members'] })
+      queryClient.invalidateQueries({ queryKey: ['member-stats'] })
+    }
   }
 }

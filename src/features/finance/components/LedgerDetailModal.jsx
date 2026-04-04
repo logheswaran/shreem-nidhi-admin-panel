@@ -17,7 +17,7 @@ const LedgerDetailModal = ({ isOpen, onClose, entry }) => {
         <p className={`text-3xl font-headline font-bold ${isCredit ? 'text-green-600' : 'text-red-600'}`}>
           {isCredit ? '+' : '-'} ₹{Number(entry.amount).toLocaleString()}
         </p>
-        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-navy/40 mt-2">
+        <p className="text-[10px] font-black uppercase tracking-[0.2em] text-[#2B2620]/40 mt-2">
           {entry.transaction_type} Transaction Verified
         </p>
       </div>
@@ -27,38 +27,38 @@ const LedgerDetailModal = ({ isOpen, onClose, entry }) => {
         <div className="bg-brand-ivory/40 p-4 rounded-2xl border border-brand-gold/5 flex items-start gap-4">
           <div className="p-2 bg-white rounded-xl shadow-sm"><Hash className="w-4 h-4 text-brand-gold" /></div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-brand-navy/40 mb-1">Reference ID</p>
-            <p className="font-mono text-xs font-bold text-brand-navy">REF-{entry.id.slice(0, 12).toUpperCase()}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/40 mb-1">Reference ID</p>
+            <p className="font-mono text-xs font-bold text-[#2B2620]">REF-{entry.id.slice(0, 12).toUpperCase()}</p>
           </div>
         </div>
 
         <div className="bg-brand-ivory/40 p-4 rounded-2xl border border-brand-gold/5 flex items-start gap-4">
           <div className="p-2 bg-white rounded-xl shadow-sm"><User className="w-4 h-4 text-brand-gold" /></div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-brand-navy/40 mb-1">Associated Member</p>
-            <p className="text-sm font-bold text-brand-navy">{entry.profiles?.full_name || 'System Protocol'}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/40 mb-1">Associated Member</p>
+            <p className="text-sm font-bold text-[#2B2620]">{entry.profiles?.full_name || 'System Protocol'}</p>
           </div>
         </div>
 
         <div className="bg-brand-ivory/40 p-4 rounded-2xl border border-brand-gold/5 flex items-start gap-4">
           <div className="p-2 bg-white rounded-xl shadow-sm"><LayoutGrid className="w-4 h-4 text-brand-gold" /></div>
           <div>
-            <p className="text-[10px] font-black uppercase tracking-widest text-brand-navy/40 mb-1">Portfolio Source</p>
-            <p className="text-sm font-bold text-brand-navy">{entry.chits?.name || 'Institutional Reserve'}</p>
+            <p className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/40 mb-1">Portfolio Source</p>
+            <p className="text-sm font-bold text-[#2B2620]">{entry.chits?.name || 'Institutional Reserve'}</p>
           </div>
         </div>
 
         <div className="bg-brand-ivory/40 p-4 rounded-2xl border border-brand-gold/5 flex items-start gap-4">
            <div className="p-2 bg-white rounded-xl shadow-sm"><Clock className="w-4 h-4 text-brand-gold" /></div>
            <div>
-             <p className="text-[10px] font-black uppercase tracking-widest text-brand-navy/40 mb-1">Timestamp</p>
-             <p className="text-sm font-bold text-brand-navy">{new Date(entry.created_at).toLocaleString()}</p>
+             <p className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/40 mb-1">Timestamp</p>
+             <p className="text-sm font-bold text-[#2B2620]">{new Date(entry.created_at).toLocaleString()}</p>
            </div>
         </div>
       </div>
 
       {/* category breakdown */}
-      <div className="mb-8 p-5 bg-brand-navy rounded-3xl text-white shadow-xl">
+      <div className="mb-8 p-5 bg-[#2B2620] rounded-3xl text-white shadow-xl">
          <div className="flex justify-between items-center mb-4">
             <span className="text-[10px] font-black uppercase tracking-widest opacity-60">Classification</span>
             <span className="px-3 py-1 bg-white/10 rounded-full text-[10px] font-black uppercase tracking-widest">Verified Entry</span>
@@ -77,11 +77,11 @@ const LedgerDetailModal = ({ isOpen, onClose, entry }) => {
       <footer className="flex flex-col items-center gap-4 pt-4">
         <div className="flex items-center gap-3 px-6 py-2.5 bg-brand-gold/5 rounded-full border border-brand-gold/10 opacity-60">
            <ShieldCheck className="w-4 h-4 text-brand-gold" />
-           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-brand-navy">Immutable Cryptographic Audit</span>
+           <span className="text-[9px] font-black uppercase tracking-[0.2em] text-[#2B2620]">Immutable Cryptographic Audit</span>
         </div>
         <button
           onClick={onClose}
-          className="w-full bg-brand-ivory py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-brand-navy hover:bg-brand-gold/5 transition-all"
+          className="w-full bg-brand-ivory py-4 rounded-2xl text-[10px] font-black uppercase tracking-widest text-[#2B2620] hover:bg-brand-gold/5 transition-all"
         >
           Exit Audit View
         </button>

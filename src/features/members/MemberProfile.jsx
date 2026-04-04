@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ArrowLeft, UserCircle, Phone, Mail, MapPin, Calendar, Wallet, FileText, ArrowUpRight } from 'lucide-react'
+import { ArrowLeft, UserCircle, Phone, Mail, MapPin, Calendar, Wallet, FileText, ArrowUpRight, AlertCircle, AlertTriangle, ShieldCheck } from 'lucide-react'
 import { memberService } from './api'
 import { financeService } from '../finance/api'
 import DataTable from '../../shared/components/ui/DataTable'
 import StatusBadge from '../../shared/components/ui/StatusBadge'
+import RiskBadge from '../../shared/components/ui/RiskBadge'
 import toast from 'react-hot-toast'
 import ConfirmDialog from '../../shared/components/ui/ConfirmDialog'
 import { supabase } from '../../core/lib/supabase'
@@ -17,6 +18,17 @@ const MemberProfile = () => {
   const [loading, setLoading] = useState(true)
   const [confirmFreeze, setConfirmFreeze] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
+
+  const computeRisk = (m) => {
+    if (!m) return { level: 'LOW', reason: 'No data' }
+    const monthsElapsed = Math.floor((Date.now() - new Date(m.joined_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
+    const monthsPaid = m.months_paid || 0
+    const missed = Math.max(0, monthsElapsed - monthsPaid)
+    
+    if (missed >= 3 || m.status === 'defaulter') return { level: 'HIGH', reason: `${missed} payments missed` }
+    if (missed >= 1) return { level: 'MEDIUM', reason: `${missed} payment delay` }
+    return { level: 'LOW', reason: 'Perfect standing' }
+  }
 
   useEffect(() => {
     const fetchMemberData = async () => {
@@ -31,7 +43,8 @@ const MemberProfile = () => {
           return
         }
 
-        setMember(found)
+        const memberWithRisk = { ...found, risk: computeRisk(found) }
+        setMember(memberWithRisk)
 
         // Filtering transitions specifically for this member based on user_id
         const allLedger = await financeService.getLedger()
@@ -121,15 +134,20 @@ const MemberProfile = () => {
             </div>
           </div>
           
-          <h2 className="text-3xl font-headline font-bold text-brand-navy dark:text-[#F0EDD4] leading-tight">{member.profiles?.full_name}</h2>
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-gold mt-2 bg-brand-gold/10 px-4 py-1.5 rounded-full inline-flex items-center gap-2">
-            <div className={`w-1.5 h-1.5 rounded-full ${member.profiles?.is_frozen ? 'bg-red-500' : 'bg-brand-gold animate-pulse'}`}></div> 
-            {member.profiles?.is_frozen ? 'Frozen Delegate' : 'Active Delegate'}
-          </p>
+          <h3 className="text-2xl font-headline font-bold text-[#2B2620]">{member.profiles?.full_name || 'Anonymous'}</h3>
+          <p className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-gold mt-1 underline decoration-brand-gold/30 underline-offset-4">Verified Financial Beneficiary</p>
+          
+          <div className="flex flex-col items-center gap-2 mt-3">
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-gold bg-brand-gold/10 px-4 py-1.5 rounded-full inline-flex items-center gap-2">
+              <div className={`w-1.5 h-1.5 rounded-full ${member.profiles?.is_frozen ? 'bg-red-500' : 'bg-brand-gold animate-pulse'}`}></div> 
+              {member.profiles?.is_frozen ? 'Frozen Delegate' : 'Active Delegate'}
+            </p>
+            <RiskBadge level={member.risk?.level} reason={member.risk?.reason} />
+          </div>
 
           {member.profiles?.is_frozen && (
             <div className="mt-4 px-4 py-2 bg-red-50 border border-red-200 text-red-600 text-xs font-bold rounded-xl w-full text-left flex items-start gap-2">
-               <AlertOctagon className="w-4 h-4 shrink-0" />
+               <AlertCircle className="w-4 h-4 shrink-0" />
                <p>Account suspended. Financial operations are blocked.</p>
             </div>
           )}
@@ -138,32 +156,32 @@ const MemberProfile = () => {
 
           <div className="w-full space-y-6 text-left">
              <div className="flex items-center gap-4 group">
-               <div className="w-10 h-10 rounded-2xl bg-brand-ivory dark:bg-[#12122A] flex items-center justify-center text-brand-gold group-hover:bg-brand-gold group-hover:text-white transition-colors border border-brand-gold/10">
+               <div className="w-10 h-10 rounded-2xl bg-brand-ivory flex items-center justify-center text-brand-gold group-hover:bg-brand-gold group-hover:text-white transition-colors border border-brand-gold/10">
                  <Phone className="w-4 h-4" />
                </div>
                <div>
-                 <p className="text-[9px] uppercase tracking-[0.2em] font-black text-brand-text/30 dark:text-[#6B6458]">Primary Contact</p>
-                 <p className="font-bold text-brand-navy dark:text-[#F0EDD4] text-sm mt-0.5">{member.profiles?.mobile_number || 'N/A'}</p>
+                 <p className="text-[9px] uppercase tracking-[0.2em] font-black text-brand-text/30">Primary Contact</p>
+                 <p className="font-bold text-[#2B2620] text-sm mt-0.5">{member.profiles?.mobile_number || 'N/A'}</p>
                </div>
              </div>
 
              <div className="flex items-center gap-4 group">
-               <div className="w-10 h-10 rounded-2xl bg-brand-ivory dark:bg-[#12122A] flex items-center justify-center text-brand-gold group-hover:bg-brand-gold group-hover:text-white transition-colors border border-brand-gold/10">
+               <div className="w-10 h-10 rounded-2xl bg-brand-ivory flex items-center justify-center text-brand-gold group-hover:bg-brand-gold group-hover:text-white transition-colors border border-brand-gold/10">
                  <Mail className="w-4 h-4" />
                </div>
                <div>
-                 <p className="text-[9px] uppercase tracking-[0.2em] font-black text-brand-text/30 dark:text-[#6B6458]">Digital Mailbox</p>
-                 <p className="font-bold text-brand-navy dark:text-[#F0EDD4] text-sm mt-0.5">{member.profiles?.email || 'N/A'}</p>
+                 <p className="text-[9px] uppercase tracking-[0.2em] font-black text-brand-text/30">Digital Mailbox</p>
+                 <p className="font-bold text-[#2B2620] text-sm mt-0.5">{member.profiles?.email || 'N/A'}</p>
                </div>
              </div>
 
              <div className="flex items-center gap-4 group">
-               <div className="w-10 h-10 rounded-2xl bg-brand-ivory dark:bg-[#12122A] flex items-center justify-center text-brand-gold group-hover:bg-brand-gold group-hover:text-white transition-colors border border-brand-gold/10">
+               <div className="w-10 h-10 rounded-2xl bg-brand-ivory flex items-center justify-center text-brand-gold group-hover:bg-brand-gold group-hover:text-white transition-colors border border-brand-gold/10">
                  <Calendar className="w-4 h-4" />
                </div>
                <div>
-                 <p className="text-[9px] uppercase tracking-[0.2em] font-black text-brand-text/30 dark:text-[#6B6458]">Registration Date</p>
-                 <p className="font-bold text-brand-navy dark:text-[#F0EDD4] text-sm mt-0.5">{member.joined_at ? new Date(member.joined_at).toLocaleDateString() : 'N/A'}</p>
+                 <p className="text-[9px] uppercase tracking-[0.2em] font-black text-brand-text/30">Registration Date</p>
+                 <p className="font-bold text-[#2B2620] text-sm mt-0.5">{member.joined_at ? new Date(member.joined_at).toLocaleDateString() : 'N/A'}</p>
                </div>
              </div>
           </div>
@@ -176,18 +194,25 @@ const MemberProfile = () => {
               <div className="bg-white rounded-[2rem] p-6 border border-brand-gold/10 hover:shadow-md transition-all group cursor-default">
                  <Wallet className="w-6 h-6 text-brand-gold mb-4 stroke-[1.5]" />
                  <h4 className="text-[10px] font-black uppercase tracking-[0.1em] text-on-surface-variant mb-1">Total Assets</h4>
-                 <p className="text-2xl font-headline font-bold text-brand-navy group-hover:text-brand-gold transition-colors">
-                   ₹{transactions.filter(t => t.transaction_type === 'credit').reduce((s,t) => s + Number(t.amount), 0).toLocaleString()}
+                 <p className="text-2xl font-headline font-bold text-[#2B2620] transition-colors">
+                   ₹{Number(member.total_contribution || 0).toLocaleString()}
                  </p>
               </div>
               <div className="bg-white rounded-[2rem] p-6 border border-brand-gold/10 hover:shadow-md transition-all group cursor-default">
                  <ArrowUpRight className="w-6 h-6 text-red-400 mb-4 stroke-[1.5]" />
-                 <h4 className="text-[10px] font-black uppercase tracking-[0.1em] text-on-surface-variant mb-1">Credit Exposure</h4>
-                 <p className="text-2xl font-headline font-bold text-red-600 transition-colors">₹0</p>
+                 <h4 className="text-[10px] font-black uppercase tracking-[0.1em] text-on-surface-variant mb-1">Current Liability</h4>
+                 <p className={`text-2xl font-headline font-bold transition-colors ${member.risk?.level === 'HIGH' ? 'text-red-600' : 'text-amber-600'}`}>
+                    {(() => {
+                      const monthsElapsed = Math.floor((Date.now() - new Date(member.joined_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
+                      const expected = (member.chits?.monthly_amount || 0) * monthsElapsed
+                      const pending = Math.max(0, expected - (member.total_contribution || 0))
+                      return `₹${Number(pending).toLocaleString()}`
+                    })()}
+                 </p>
               </div>
-              <div className="bg-brand-navy rounded-[2rem] p-6 text-white text-center flex flex-col justify-center items-center relative overflow-hidden group hover:brightness-110 transition-all cursor-pointer">
-                 <div className="absolute inset-0 opacity-10 heritage-gradient"></div>
-                 <FileText className="w-6 h-6 text-brand-gold mb-3 z-10" />
+              <div className="heritage-gradient rounded-[2rem] p-6 text-white text-center flex flex-col justify-center items-center relative overflow-hidden group hover:brightness-110 transition-all cursor-pointer shadow-xl shadow-brand-gold/10">
+                 <div className="absolute inset-0 opacity-10 bg-white/10"></div>
+                 <FileText className="w-6 h-6 text-white mb-3 z-10" />
                  <span className="text-[10px] font-black uppercase tracking-widest z-10">Export Profile<br/>Dossier</span>
               </div>
             </div>
@@ -211,7 +236,7 @@ const MemberProfile = () => {
            <div className="bg-white rounded-[2.5rem] border border-brand-gold/10 overflow-hidden shadow-sm flex flex-col soft-glow">
              <div className="p-8 border-b border-brand-gold/5 flex justify-between items-center bg-surface-container/20">
                <div>
-                  <h3 className="font-headline text-2xl font-bold text-brand-navy">Personal Ledger</h3>
+                  <h3 className="font-headline text-2xl font-bold text-[#2B2620]">Personal Ledger</h3>
                   <p className="text-xs font-medium text-brand-text/40 mt-1 uppercase tracking-widest font-body">Transaction History</p>
                </div>
                <StatusBadge status={member.status} />

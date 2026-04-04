@@ -20,7 +20,7 @@ const Profile = () => {
     <div className="animate-in fade-in duration-700 max-w-5xl mx-auto">
       <header className="mb-12 flex justify-between items-end">
         <div>
-          <h2 className="text-4xl font-headline font-bold text-brand-navy">Administrator Profile</h2>
+          <h2 className="text-4xl font-headline font-bold text-[#2B2620]">Administrator Profile</h2>
           <p className="text-on-surface-variant font-body mt-2 opacity-70">Manage your institutional identity and security credentials.</p>
         </div>
       </header>
@@ -37,7 +37,7 @@ const Profile = () => {
               </div>
               
               <div className="mt-6 z-10">
-                <h4 className="text-2xl font-headline font-bold text-brand-navy">{profile?.full_name || 'Super Admin'}</h4>
+                <h4 className="text-2xl font-headline font-bold text-[#2B2620]">{profile?.full_name || 'Super Admin'}</h4>
                 <div className="mt-2 flex items-center justify-center gap-2">
                    <Shield className="w-3.5 h-3.5 text-brand-gold" />
                    <span className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-gold/80">{profile?.role_type || 'Administrator'}</span>
@@ -53,7 +53,7 @@ const Profile = () => {
                     </div>
                     <div>
                        <p className="text-[8px] font-black uppercase tracking-widest text-brand-text/30 leading-none mb-1">Institutional Email</p>
-                       <p className="text-xs font-bold text-brand-navy">{user?.email || 'admin@sreemnidhi.com'}</p>
+                       <p className="text-xs font-bold text-[#2B2620]">{user?.email || 'admin@sreemnidhi.com'}</p>
                     </div>
                  </div>
                  <div className="flex items-center gap-4 group">
@@ -62,7 +62,7 @@ const Profile = () => {
                     </div>
                     <div>
                        <p className="text-[8px] font-black uppercase tracking-widest text-brand-text/30 leading-none mb-1">Contact Anchor</p>
-                       <p className="text-xs font-bold text-brand-navy">{profile?.phone_number || '+91 98765 43210'}</p>
+                       <p className="text-xs font-bold text-[#2B2620]">{profile?.phone_number || '+91 98765 43210'}</p>
                     </div>
                  </div>
               </div>
@@ -75,7 +75,7 @@ const Profile = () => {
               </button>
            </div>
            
-           <div className="bg-brand-navy p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
+           <div className="bg-[#2B2620] p-10 rounded-[3rem] shadow-2xl relative overflow-hidden">
               <div className="absolute top-0 right-0 p-10 opacity-10">
                  <Landmark className="w-24 h-24 text-white" />
               </div>
@@ -103,7 +103,7 @@ const Profile = () => {
               <section>
                  <div className="flex items-center gap-4 mb-8">
                     <div className="w-12 h-12 rounded-2xl bg-brand-gold/5 flex items-center justify-center"><Settings className="w-6 h-6 text-brand-gold" /></div>
-                    <h3 className="text-2xl font-headline font-bold text-brand-navy">General Preferences</h3>
+                    <h3 className="text-2xl font-headline font-bold text-[#2B2620]">General Preferences</h3>
                  </div>
                  
                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
@@ -112,7 +112,7 @@ const Profile = () => {
                           <Bell className="w-6 h-6 text-brand-gold/40 group-hover:text-brand-gold" />
                           <div className="w-10 h-6 bg-brand-gold/20 rounded-full relative"><div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div></div>
                        </div>
-                       <p className="text-sm font-bold text-brand-navy leading-none mb-2">Push Alerts</p>
+                       <p className="text-sm font-bold text-[#2B2620] leading-none mb-2">Push Alerts</p>
                        <p className="text-[10px] text-brand-text/30 font-medium leading-relaxed">Receive real-time notifications for ledger entries.</p>
                     </div>
                     <div className="bg-brand-ivory/50 p-6 rounded-3xl border border-brand-gold/5 group hover:bg-white transition-all cursor-pointer">
@@ -120,7 +120,7 @@ const Profile = () => {
                           <Shield className="w-6 h-6 text-brand-gold/40 group-hover:text-brand-gold" />
                           <div className="w-10 h-6 bg-brand-gold/20 rounded-full relative"><div className="absolute right-1 top-1 w-4 h-4 bg-white rounded-full shadow-sm"></div></div>
                        </div>
-                       <p className="text-sm font-bold text-brand-navy leading-none mb-2">Audit Logs</p>
+                       <p className="text-sm font-bold text-[#2B2620] leading-none mb-2">Audit Logs</p>
                        <p className="text-[10px] text-brand-text/30 font-medium leading-relaxed">Keep detailed history of your administrative actions.</p>
                     </div>
                  </div>
@@ -131,7 +131,7 @@ const Profile = () => {
               <section>
                  <div className="flex items-center gap-4 mb-8">
                     <div className="w-12 h-12 rounded-2xl bg-brand-gold/5 flex items-center justify-center"><Key className="w-6 h-6 text-brand-gold" /></div>
-                    <h3 className="text-2xl font-headline font-bold text-brand-navy">Access Control</h3>
+                    <h3 className="text-2xl font-headline font-bold text-[#2B2620]">Access Control</h3>
                  </div>
                  
                  <div className="space-y-6">
@@ -139,7 +139,7 @@ const Profile = () => {
                        <div className="flex items-center gap-5">
                           <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm"><Fingerprint className="w-6 h-6 text-brand-gold/40" /></div>
                           <div className="text-left">
-                             <p className="text-sm font-bold text-brand-navy">Update Cryptographic Password</p>
+                             <p className="text-sm font-bold text-[#2B2620]">Update Cryptographic Password</p>
                              <p className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest mt-1">Last rotated 45 days ago</p>
                           </div>
                        </div>
@@ -150,7 +150,7 @@ const Profile = () => {
                        <div className="flex items-center gap-5">
                           <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm"><Shield className="w-6 h-6 text-brand-gold/40" /></div>
                           <div className="text-left">
-                             <p className="text-sm font-bold text-brand-navy">Manage Institutional Keys</p>
+                             <p className="text-sm font-bold text-[#2B2620]">Manage Institutional Keys</p>
                              <p className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest mt-1">Configure Supabase Service Roles</p>
                           </div>
                        </div>

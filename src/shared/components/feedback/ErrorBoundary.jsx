@@ -26,14 +26,14 @@ class ErrorBoundary extends React.Component {
               <AlertTriangle className="text-red-500 w-10 h-10" />
             </div>
 
-            <h2 className="font-headline text-2xl font-bold text-brand-navy mb-4">System Interruption</h2>
+            <h2 className="font-headline text-2xl font-bold text-[#2B2620] mb-4">System Interruption</h2>
             <p className="text-brand-text/60 text-sm leading-relaxed mb-10 italic">
               An unexpected error occurred in the luxury interface. Our automated audit system has been notified.
             </p>
 
             <div className="bg-brand-gold/5 p-4 rounded-2xl mb-10 text-left border border-brand-gold/5">
               <p className="text-[10px] font-black uppercase tracking-widest text-brand-goldDark mb-2">Technical Insight</p>
-              <code className="text-[10px] text-brand-navy block break-words opacity-70">
+              <code className="text-[10px] text-[#2B2620] block break-words opacity-70">
                 {this.state.error?.message || 'Internal logic mismatch'}
               </code>
             </div>

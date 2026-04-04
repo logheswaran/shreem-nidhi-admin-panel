@@ -12,7 +12,11 @@ import {
   X,
   FileText,
   ArrowUpRight,
-  Activity
+  Activity,
+  Settings,
+  CircleDollarSign,
+  Fingerprint,
+  IndianRupee
 } from 'lucide-react'
 import { adminService } from './api'
 import { financeService } from '../finance/api'
@@ -35,11 +39,19 @@ const AdminControls = () => {
   const [overrideFilter, setOverrideFilter] = useState('members') // 'members' or 'transactions'
 
   const tabs = [
-    { id: 'roles', label: 'Role Management', icon: ShieldCheck },
+    { id: 'roles', label: 'Security & RBAC', icon: ShieldCheck },
+    { id: 'settings', label: 'System Settings', icon: Settings },
     { id: 'audit', label: 'Audit Logs', icon: History },
     { id: 'kyc', label: 'KYC Queue', icon: UserCheck },
     { id: 'overrides', label: 'Safety Overrides', icon: AlertOctagon },
   ]
+
+  const [systemSettings, setSystemSettings] = useState({
+    penaltyRate: 2.5,
+    interestRate: 15.0,
+    auctionBuffer: 5,
+    autoAlerts: true
+  })
 
   const fetchData = async () => {
     try {
@@ -48,6 +60,10 @@ const AdminControls = () => {
       if (activeTab === 'roles') result = await adminService.getProfiles()
       else if (activeTab === 'audit') result = await adminService.getAuditLogs()
       else if (activeTab === 'kyc') result = await adminService.getPendingKYC()
+      else if (activeTab === 'settings') {
+        // Mocking settings fetch or keeping local
+        result = []
+      }
       else if (activeTab === 'overrides') {
          if (overrideFilter === 'members') {
            result = await adminService.getProfiles()
@@ -134,20 +150,25 @@ const AdminControls = () => {
       { 
         header: 'Security Delegate', 
         render: (row) => (
-          <div className="flex flex-col">
-            <span className="font-bold text-brand-navy">{row.full_name}</span>
-            <span className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest">{row.mobile_number}</span>
+          <div className="flex items-center gap-4">
+             <div className="w-10 h-10 rounded-2xl bg-brand-gold/5 flex items-center justify-center text-brand-gold border border-brand-gold/10">
+                <Fingerprint className="w-5 h-5" />
+             </div>
+             <div className="flex flex-col text-left">
+               <span className="font-bold text-[#2B2620]">{row.full_name}</span>
+               <span className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest leading-none">{row.mobile_number}</span>
+             </div>
           </div>
         )
       },
       { 
-        header: 'Clearance Level', 
+        header: 'Clearance Matrix', 
         render: (row) => (
-          <span className={`text-[9px] font-black uppercase tracking-widest px-3 py-1 rounded-full ${
-            row.role_type === 'admin' ? 'bg-brand-navy text-white' : 'bg-brand-gold/10 text-brand-gold'
-          }`}>
-            {row.role_type}
-          </span>
+          <div className="flex gap-1">
+             {['Auctions', 'Payments', 'Ledger'].map(mod => (
+               <div key={mod} className={`w-2.5 h-2.5 rounded-full ${row.role_type === 'admin' ? 'bg-green-500' : 'bg-brand-gold/20'}`} title={`${mod} Access`}></div>
+             ))}
+          </div>
         )
       },
       { 
@@ -155,9 +176,9 @@ const AdminControls = () => {
         render: (row) => (
           <button 
             onClick={() => handleToggleRole(row)}
-            className="text-xs font-bold text-brand-gold hover:underline flex items-center gap-2"
+            className="bg-brand-ivory text-[#2B2620] text-[10px] font-black uppercase tracking-widest px-6 py-2.5 rounded-xl hover:bg-brand-gold hover:text-white transition-all shadow-sm flex items-center gap-2"
           >
-            {row.role_type === 'admin' ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+            {row.role_type === 'admin' ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
             Modify Role
           </button>
         )
@@ -165,12 +186,12 @@ const AdminControls = () => {
     ],
     audit: [
        { header: 'Event Code', render: (row) => <span className="font-mono text-[10px] text-brand-gold">EVT-{row.id.slice(0,8).toUpperCase()}</span> },
-       { header: 'Target Table', render: (row) => <span className="text-xs font-bold text-brand-navy uppercase tracking-widest">{row.table_name}</span> },
+       { header: 'Target Table', render: (row) => <span className="text-xs font-bold text-[#2B2620] uppercase tracking-widest">{row.table_name}</span> },
        { header: 'Action', render: (row) => <span className="text-sm font-bold text-brand-text/60">{row.action}</span> },
        { header: 'Timestamp', render: (row) => <span className="text-[10px] font-bold text-brand-text/30">{new Date(row.created_at).toLocaleString()}</span> }
     ],
      kyc: [
-        { header: 'Applicant', render: (row) => <span className="font-bold text-brand-navy">{row.profiles?.full_name}</span> },
+        { header: 'Applicant', render: (row) => <span className="font-bold text-[#2B2620]">{row.profiles?.full_name}</span> },
         { header: 'Identification', render: (row) => <span className="font-mono text-[10px] text-brand-gold">ID: XXXX-XXXX-{row.aadhaar_number?.slice(-4)}</span> },
         { 
           header: 'Compliance Action', 
@@ -184,12 +205,12 @@ const AdminControls = () => {
      ],
      overrides: overrideFilter === 'members' ? [
         { 
-          header: 'Entity Identity', 
-          render: (row) => (
-            <div className="flex flex-col">
-              <span className="font-bold text-brand-navy">{row.full_name}</span>
-              <span className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest">{row.mobile_number}</span>
-            </div>
+           header: 'Entity Identity', 
+           render: (row) => (
+             <div className="flex flex-col">
+               <span className="font-bold text-[#2B2620]">{row.full_name}</span>
+               <span className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest">{row.mobile_number}</span>
+             </div>
           )
         },
         { 
@@ -223,15 +244,15 @@ const AdminControls = () => {
      ] : [
         { 
           header: 'Transaction Ref', 
-          render: (row) => (
-            <div className="flex items-center gap-2">
-               <Activity className="w-3.5 h-3.5 text-brand-gold" />
-               <span className="font-mono text-[10px] text-brand-navy uppercase">REF-{row.id.slice(0,8)}</span>
-            </div>
+           render: (row) => (
+             <div className="flex items-center gap-2">
+                <Activity className="w-3.5 h-3.5 text-brand-gold" />
+                <span className="font-mono text-[10px] text-[#2B2620] uppercase">REF-{row.id.slice(0,8)}</span>
+             </div>
           )
         },
-        { header: 'Member', render: (row) => <span className="text-xs font-bold text-brand-navy">{row.profiles?.full_name}</span> },
-        { header: 'Amount', render: (row) => <span className="font-headline font-bold text-brand-navy">₹{Number(row.amount).toLocaleString()}</span> },
+         { header: 'Member', render: (row) => <span className="text-xs font-bold text-[#2B2620]">{row.profiles?.full_name}</span> },
+         { header: 'Amount', render: (row) => <span className="font-headline font-bold text-[#2B2620]">₹{Number(row.amount).toLocaleString()}</span> },
         { 
           header: 'Action', 
           render: (row) => (
@@ -255,21 +276,21 @@ const AdminControls = () => {
     <div className="animate-in fade-in duration-700">
       <header className="mb-10 flex items-end justify-between">
         <div>
-          <div className="flex items-center gap-3 text-brand-navy mb-2">
-             <ShieldCheck className="w-6 h-6 border-2 border-brand-navy rounded-lg p-0.5" />
+          <div className="flex items-center gap-3 text-brand-gold mb-2">
+             <ShieldCheck className="w-6 h-6 border-2 border-brand-gold rounded-lg p-0.5" />
              <span className="text-[10px] font-black uppercase tracking-[0.3em]">Master Command</span>
           </div>
-          <h2 className="text-4xl font-headline font-bold text-brand-navy">Admin Controls</h2>
+          <h2 className="text-4xl font-headline font-bold text-[#2B2620]">Admin Controls</h2>
           <p className="text-on-surface-variant font-body mt-2 opacity-70">Oversee system integrity and enforce security governance.</p>
         </div>
         
         <div className="relative group">
            <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-text/20 group-focus-within:text-brand-gold transition-colors w-4 h-4" />
-           <input 
-             type="text" 
-             placeholder={`Search in ${tabs.find(t => t.id === activeTab).label}...`}
-             className="w-80 bg-white border-2 border-brand-gold/5 rounded-full pl-12 pr-6 py-3.5 text-xs font-bold text-brand-navy focus:outline-none focus:border-brand-gold/30 transition-all shadow-sm"
-             value={searchTerm}
+            <input 
+              type="text" 
+              placeholder={`Search in ${tabs.find(t => t.id === activeTab).label}...`}
+              className="w-80 bg-white border-2 border-brand-gold/5 rounded-full pl-12 pr-6 py-3.5 text-xs font-bold text-[#2B2620] focus:outline-none focus:border-brand-gold/30 transition-all shadow-sm"
+              value={searchTerm}
              onChange={(e) => setSearchTerm(e.target.value)}
            />
         </div>
@@ -284,8 +305,8 @@ const AdminControls = () => {
                onClick={() => { setActiveTab(tab.id); setSearchTerm(''); }}
                className={`flex items-center gap-3 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
                  activeTab === tab.id 
-                   ? 'bg-brand-navy text-white shadow-lg' 
-                   : 'text-brand-navy/40 hover:bg-brand-navy/5'
+                   ? 'heritage-gradient text-white shadow-lg' 
+                   : 'text-[#2B2620]/40 hover:bg-brand-gold/5'
                }`}
              >
                <tab.icon className="w-4 h-4" />
@@ -298,13 +319,13 @@ const AdminControls = () => {
           <div className="flex gap-1 bg-brand-ivory p-1 rounded-2xl border border-brand-gold/5 w-fit h-fit self-center">
              <button 
                onClick={() => setOverrideFilter('members')}
-               className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${overrideFilter === 'members' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-text/30'}`}
+               className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${overrideFilter === 'members' ? 'bg-white text-[#2B2620] shadow-sm' : 'text-brand-text/30'}`}
              >
                Identity Holds
              </button>
              <button 
                onClick={() => setOverrideFilter('transactions')}
-               className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${overrideFilter === 'transactions' ? 'bg-white text-brand-navy shadow-sm' : 'text-brand-text/30'}`}
+               className={`px-4 py-2 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${overrideFilter === 'transactions' ? 'bg-white text-[#2B2620] shadow-sm' : 'text-brand-text/30'}`}
              >
                Financial Reversal
              </button>
@@ -312,8 +333,58 @@ const AdminControls = () => {
         )}
       </div>
 
-      <div className="bg-white rounded-[2.5rem] border border-brand-gold/10 shadow-2xl overflow-hidden min-h-[500px]">
-         <DataTable columns={columns[activeTab]} data={filteredData} loading={loading} />
+      <div className="min-h-[500px]">
+         {activeTab === 'settings' ? (
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-8 p-10 bg-white rounded-[2.5rem] border border-brand-gold/10 shadow-2xl">
+              <div className="space-y-8">
+                  <div className="flex items-center gap-4">
+                     <div className="w-12 h-12 bg-brand-gold/5 rounded-2xl flex items-center justify-center text-brand-gold"><IndianRupee className="w-6 h-6" /></div>
+                     <div>
+                        <h4 className="font-headline font-bold text-[#2B2620] text-xl">Financial Algorithms</h4>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-brand-gold/60">Configure penalty and interest engines</p>
+                     </div>
+                  </div>
+                 <div className="space-y-6">
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/30 ml-2">Default Penalty Rate (%)</label>
+                       <input type="number" step="0.1" value={systemSettings.penaltyRate} onChange={(e) => setSystemSettings({...systemSettings, penaltyRate: e.target.value})} className="w-full bg-brand-ivory border border-brand-gold/5 rounded-2xl p-4 text-xs font-bold text-[#2B2620] outline-none focus:border-brand-gold/30 shadow-inner" />
+                    </div>
+                    <div className="space-y-3">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/30 ml-2">Annual Interest Ceiling (%)</label>
+                       <input type="number" step="0.1" value={systemSettings.interestRate} onChange={(e) => setSystemSettings({...systemSettings, interestRate: e.target.value})} className="w-full bg-brand-ivory border border-brand-gold/5 rounded-2xl p-4 text-xs font-bold text-[#2B2620] outline-none focus:border-brand-gold/30 shadow-inner" />
+                    </div>
+                 </div>
+              </div>
+
+               <div className="space-y-8">
+                  <div className="flex items-center gap-4">
+                     <div className="w-12 h-12 bg-brand-gold/5 rounded-2xl flex items-center justify-center text-brand-gold"><History className="w-6 h-6" /></div>
+                     <div>
+                        <h4 className="font-headline font-bold text-[#2B2620] text-xl">Automation Rules</h4>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-brand-gold/60">Trigger institutional safety protocols</p>
+                     </div>
+                  </div>
+                  <div className="space-y-6">                     <div className="flex items-center justify-between p-6 bg-brand-ivory rounded-3xl border border-brand-gold/5">
+                        <div>
+                           <p className="text-xs font-bold text-[#2B2620] uppercase tracking-widest">Enforce Sequential Locks</p>
+                           <p className="text-[10px] text-[#2B2620]/60 font-medium tracking-wide mt-1">Prevent multiple auctions per scheme cycle</p>
+                        </div>
+                        <div className={`w-14 h-8 rounded-full p-1 cursor-pointer transition-all ${systemSettings.autoAlerts ? 'bg-brand-gold' : 'bg-gray-200'}`} onClick={() => setSystemSettings({...systemSettings, autoAlerts: !systemSettings.autoAlerts})}>
+                           <div className={`w-6 h-6 bg-white rounded-full transition-all shadow-sm ${systemSettings.autoAlerts ? 'ml-6' : 'ml-0'}`}></div>
+                        </div>
+                    </div>
+                    <button className="w-full heritage-gradient text-white text-[10px] font-black uppercase tracking-widest py-5 rounded-[2rem] shadow-xl hover:brightness-110 active:scale-95 transition-all">
+                       Commit Operational Changes
+                    </button>
+
+                 </div>
+              </div>
+           </div>
+         ) : (
+           <div className="bg-white rounded-[2.5rem] border border-brand-gold/10 shadow-2xl overflow-hidden min-h-[500px]">
+             <DataTable columns={columns[activeTab]} data={filteredData} loading={loading} />
+           </div>
+         )}
       </div>
 
       <ConfirmDialog 
@@ -339,7 +410,7 @@ const AdminControls = () => {
               <div>
                 <p className="text-xs text-amber-900 leading-relaxed font-bold">Override Protocol</p>
                 <p className="text-[10px] text-amber-800 leading-relaxed mt-1"> 
-                  Executing safety reversal for REF-{selectedItem?.id?.slice(0,8)}. 
+                  Executing safety reversal for REF-{String(selectedItem?.id || '').slice(0,8)}. 
                   This will credited the amount back to the member's outstanding balance.
                 </p>
               </div>

@@ -30,26 +30,38 @@ export const getDashboardStats = async () => {
     .from('maturity_payouts')
     .select('id', { count: 'exact', head: true })
     .eq('status', 'pending')
+  
+  // E. Pending Collection (Current month pending)
+  const currentMonth = new Date().getMonth() + 1
+  const pendingCollectionPromise = supabase
+    .from('contributions')
+    .select('amount_due')
+    .eq('payment_status', 'pending')
+    .eq('month_number', currentMonth)
 
-  const [membersRes, chitsRes, collectionRes, payoutsRes] = await Promise.all([
+  const [membersRes, chitsRes, collectionRes, payoutsRes, pendingRes] = await Promise.all([
     membersPromise,
     chitsPromise,
     collectionPromise,
-    payoutsPromise
+    payoutsPromise,
+    pendingCollectionPromise
   ])
 
   if (membersRes.error) throw membersRes.error
   if (chitsRes.error) throw chitsRes.error
   if (collectionRes.error) throw collectionRes.error
   if (payoutsRes.error) throw payoutsRes.error
+  if (pendingRes.error) throw pendingRes.error
 
   const totalCollection = (collectionRes.data || []).reduce((sum, row) => sum + Number(row.amount_paid || 0), 0)
+  const pendingCollection = (pendingRes.data || []).reduce((sum, row) => sum + Number(row.amount_due || 0), 0)
 
   return {
     totalMembers: membersRes.count || 0,
     activeChits: chitsRes.count || 0,
     totalCollection: totalCollection,
-    pendingPayouts: payoutsRes.count || 0
+    pendingPayouts: payoutsRes.count || 0,
+    pendingCollection: pendingCollection
   }
 }
 
@@ -234,6 +246,86 @@ export const getFullLedger = async () => {
   
   if (error) throw error
   return data || []
+}
+
+/**
+ * 9. Today's Collection
+ */
+export const getTodayCollection = async () => {
+  const today = new Date().toISOString().split('T')[0]
+  const { data, error } = await supabase
+    .from('contributions')
+    .select('amount_paid')
+    .eq('payment_status', 'paid')
+    .gte('updated_at', today) // Falling back to updated_at if paid_at doesn't exist
+
+  if (error) throw error
+  return (data || []).reduce((sum, row) => sum + Number(row.amount_paid || 0), 0)
+}
+
+/**
+ * 10. Upcoming Auctions
+ */
+export const getUpcomingAuctions = async () => {
+  const today = new Date().toISOString().split('T')[0]
+  const { data, error } = await supabase
+    .from('auction_rounds')
+    .select(`
+      *,
+      chits(name)
+    `)
+    .gte('scheduled_date', today)
+    .lte('scheduled_date', new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+    .order('scheduled_date', { ascending: true })
+
+  if (error) return [] // Graceful degradation if table doesn't exist
+  return data || []
+}
+
+/**
+ * 11. Cash Flow Summary
+ */
+export const getCashFlowSummary = async () => {
+  const firstDay = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString()
+  const { data, error } = await supabase
+    .from('ledger')
+    .select('amount, transaction_type')
+    .gte('created_at', firstDay)
+
+  if (error) throw error
+  
+  const inflow = data.filter(l => l.transaction_type === 'credit').reduce((sum, l) => sum + Number(l.amount || 0), 0)
+  const outflow = data.filter(l => l.transaction_type === 'debit').reduce((sum, l) => sum + Number(l.amount || 0), 0)
+
+  return { inflow, outflow, net: inflow - outflow }
+}
+
+/**
+ * 12. Detailed Overdue Members
+ */
+export const getOverdueMembersDetailed = async () => {
+  const today = new Date().toISOString().split('T')[0]
+  const { data, error } = await supabase
+    .from('contributions')
+    .select(`
+      id, amount_due, due_date, 
+      chit_members!inner(
+        chits!inner(name),
+        profiles!inner(full_name)
+      )
+    `)
+    .eq('payment_status', 'pending')
+    .lt('due_date', today)
+    .order('due_date', { ascending: true })
+
+  if (error) throw error
+  return (data || []).map(c => ({
+    id: c.id,
+    amount: c.amount_due,
+    dueDate: c.due_date,
+    memberName: c.chit_members?.profiles?.full_name,
+    chitName: c.chit_members?.chits?.name
+  }))
 }
 
 // --- WRITES (STRICT RPC) --- //

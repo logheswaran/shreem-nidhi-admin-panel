@@ -13,7 +13,7 @@ const DataRow = memo(({ row, columns, rowIdx, onRowClick }) => (
     className={`transition-all duration-200 group border-b border-brand-gold/5 last:border-0 ${onRowClick ? 'cursor-pointer hover:bg-brand-gold/[0.02]' : ''}`}
   >
     {columns.map((col, colIdx) => (
-      <td key={colIdx} className="px-8 py-5 text-sm text-brand-text/80 group-hover:text-brand-navy">
+      <td key={colIdx} className="px-8 py-5 text-sm text-brand-text/80 group-hover:text-[#2B2620]">
         {col.render ? col.render(row) : row[col.accessor]}
       </td>
     ))}
@@ -115,7 +115,7 @@ const DataTable = ({ columns, data = [], loading, onRowClick, pageSize = 10 }) =
                     <td colSpan={columns.length} className="px-8 py-24 text-center">
                       <div className="flex flex-col items-center opacity-30 grayscale contrast-75">
                         <Inbox className="w-16 h-16 text-brand-gold mb-6 stroke-[1]" />
-                        <p className="text-brand-navy font-headline text-lg font-bold italic">The vault is currently empty</p>
+                        <p className="text-[#2B2620] font-headline text-lg font-bold italic">The vault is currently empty</p>
                         <p className="text-xs tracking-widest uppercase font-black mt-2">No relevant entries discovered</p>
                       </div>
                     </td>
@@ -132,7 +132,7 @@ const DataTable = ({ columns, data = [], loading, onRowClick, pageSize = 10 }) =
         <div className="flex items-center justify-between px-6 py-4 bg-white/50 backdrop-blur-md rounded-full border border-brand-gold/10 soft-glow">
           <div className="flex flex-col">
             <p className="text-[10px] font-black uppercase tracking-widest text-brand-text/30">Registry Navigation</p>
-            <p className="text-xs font-bold text-brand-navy">
+            <p className="text-xs font-bold text-[#2B2620]">
               Viewing <span className="text-brand-gold">{paginatedData.length}</span> of {sortedData.length} records
             </p>
           </div>
@@ -141,17 +141,17 @@ const DataTable = ({ columns, data = [], loading, onRowClick, pageSize = 10 }) =
             <button 
               disabled={currentPage === 1}
               onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              className="p-2.5 rounded-full bg-white border border-brand-gold/10 text-brand-navy disabled:opacity-30 hover:bg-brand-gold/10 transition-all shadow-sm active:scale-95"
+              className="p-2.5 rounded-full bg-white border border-brand-gold/10 text-[#2B2620] disabled:opacity-30 hover:bg-brand-gold/10 transition-all shadow-sm active:scale-95"
             >
               <ChevronLeft className="w-5 h-5" />
             </button>
             
             <div className="flex gap-1">
-              {[...Array(totalPages)].map((_, i) => (
+               {[...Array(totalPages)].map((_, i) => (
                 <button
                   key={i}
                   onClick={() => setCurrentPage(i + 1)}
-                  className={`w-9 h-9 rounded-full text-[10px] font-black transition-all ${currentPage === i + 1 ? 'heritage-gradient text-white shadow-lg' : 'bg-white text-brand-navy border border-brand-gold/5 hover:bg-brand-gold/5'}`}
+                  className={`w-9 h-9 rounded-full text-[10px] font-black transition-all ${currentPage === i + 1 ? 'heritage-gradient text-white shadow-lg' : 'bg-white text-[#2B2620] border border-brand-gold/5 hover:bg-brand-gold/5'}`}
                 >
                   {i + 1}
                 </button>
@@ -161,7 +161,7 @@ const DataTable = ({ columns, data = [], loading, onRowClick, pageSize = 10 }) =
             <button 
               disabled={currentPage === totalPages}
               onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              className="p-2.5 rounded-full bg-white border border-brand-gold/10 text-brand-navy disabled:opacity-30 hover:bg-brand-gold/10 transition-all shadow-sm active:scale-95"
+              className="p-2.5 rounded-full bg-white border border-brand-gold/10 text-[#2B2620] disabled:opacity-30 hover:bg-brand-gold/10 transition-all shadow-sm active:scale-95"
             >
               <ChevronRight className="w-5 h-5" />
             </button>

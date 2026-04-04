@@ -33,7 +33,7 @@ const Payouts = () => {
             {row.chit_members?.profiles?.full_name?.[0] || 'A'}
           </div>
           <div className="flex flex-col">
-            <span className="font-headline font-bold text-brand-navy leading-none mb-1">{row.chit_members?.profiles?.full_name}</span>
+            <span className="font-headline font-bold text-[#2B2620] leading-none mb-1">{row.chit_members?.profiles?.full_name}</span>
             <span className="text-[10px] text-brand-text/30 font-bold tracking-widest uppercase">{row.chits?.name}</span>
           </div>
         </div>
@@ -43,7 +43,7 @@ const Payouts = () => {
       header: 'Settlement Yield', 
       render: (row) => (
         <div>
-          <span className="font-bold text-brand-navy block leading-none mb-1">₹{Number(row.payout_amount).toLocaleString()}</span>
+          <span className="font-bold text-[#2B2620] block leading-none mb-1">₹{Number(row.payout_amount).toLocaleString()}</span>
           <span className="text-[10px] text-brand-text/40 font-bold uppercase tracking-widest italic">Net matured value</span>
         </div>
       )
@@ -62,7 +62,7 @@ const Payouts = () => {
     <div className="animate-in fade-in duration-700">
       <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h2 className="text-4xl font-headline font-bold text-brand-navy">Maturity Settlements</h2>
+          <h2 className="text-4xl font-headline font-bold text-[#2B2620]">Maturity Settlements</h2>
           <p className="text-on-surface-variant font-body mt-2 opacity-70">Execute final capital distribution for concluded trust cycles.</p>
         </div>
         {chitsAwaitingMaturity.length > 0 && (
@@ -83,12 +83,12 @@ const Payouts = () => {
              <AlertCircle className="text-brand-gold w-8 h-8" />
            </div>
            <div className="flex-1">
-             <h4 className="font-headline font-bold text-xl text-brand-navy">Concluded Cycles Detected</h4>
-             <p className="text-sm text-brand-text/60 mt-1 leading-relaxed">There are <span className="font-bold text-brand-navy">{chitsAwaitingMaturity.length} scheme(s)</span> awaiting final maturity processing. This will auto-settle any remaining loans, calculate interest, and generate payout records.</p>
+             <h4 className="font-headline font-bold text-xl text-[#2B2620]">Concluded Cycles Detected</h4>
+             <p className="text-sm text-brand-text/60 mt-1 leading-relaxed">There are <span className="font-bold text-[#2B2620]">{chitsAwaitingMaturity.length} scheme(s)</span> awaiting final maturity processing. This will auto-settle any remaining loans, calculate interest, and generate payout records.</p>
            </div>
            <button 
              onClick={() => { setSelectedChit(chitsAwaitingMaturity[0]); setIsModalOpen(true); }}
-             className="px-8 py-3 bg-brand-navy text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:bg-brand-navy-light transition-all shadow-xl shrink-0"
+             className="px-8 py-3 bg-[#2B2620] text-white rounded-full text-[10px] font-black uppercase tracking-widest hover:brightness-110 transition-all shadow-xl shrink-0"
            >
              Handle Settlement
            </button>
@@ -104,7 +104,7 @@ const Payouts = () => {
                <div className="flex items-center gap-6 mb-6">
                   <div className="w-16 h-16 heritage-gradient rounded-3xl flex items-center justify-center text-white shadow-2xl"><Landmark className="w-8 h-8" /></div>
                   <div>
-                    <h5 className="font-headline font-bold text-2xl text-brand-navy tracking-tight">{selectedChit.name}</h5>
+                    <h5 className="font-headline font-bold text-2xl text-[#2B2620] tracking-tight">{selectedChit.name}</h5>
                     <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-gold/60">Final Settlement Window</p>
                   </div>
                </div>
@@ -112,11 +112,11 @@ const Payouts = () => {
                <div className="grid grid-cols-2 gap-6 mt-8">
                   <div className="bg-white/60 backdrop-blur-md p-6 rounded-3xl border border-brand-gold/5 shadow-sm">
                     <p className="text-[9px] font-black text-brand-gold/40 uppercase tracking-[0.2em] mb-2 leading-none">Status</p>
-                    <p className="text-xs font-bold text-brand-navy">Month {selectedChit.current_month} of {selectedChit.total_months} (Concluded)</p>
+                    <p className="text-xs font-bold text-[#2B2620]">Month {selectedChit.current_month} of {selectedChit.total_months} (Concluded)</p>
                   </div>
                   <div className="bg-white/60 backdrop-blur-md p-6 rounded-3xl border border-brand-gold/5 shadow-sm">
                     <p className="text-[9px] font-black text-brand-gold/40 uppercase tracking-[0.2em] mb-2 leading-none">Participants</p>
-                    <p className="text-xs font-bold text-brand-navy">{selectedChit.max_members} Beneficiaries</p>
+                    <p className="text-xs font-bold text-[#2B2620]">{selectedChit.max_members} Beneficiaries</p>
                   </div>
                </div>
             </div>
@@ -163,7 +163,7 @@ const Payouts = () => {
 
       <footer className="mt-20 flex flex-col items-center gap-4 opacity-30">
         <div className="w-16 h-[1px] bg-brand-gold"></div>
-        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-brand-navy">Trusted Settlement Interface</p>
+        <p className="text-[9px] font-black uppercase tracking-[0.4em] text-[#2B2620]">Trusted Settlement Interface</p>
       </footer>
     </div>
   )

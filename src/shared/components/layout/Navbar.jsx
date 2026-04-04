@@ -13,7 +13,7 @@ const Navbar = ({ onMenuClick, onSearchClick, onNewActionClick }) => {
         {/* Mobile Menu Toggle */}
         <button 
           onClick={onMenuClick}
-          className="lg:hidden p-2 text-brand-navy hover:bg-brand-gold/5 rounded-full transition-colors"
+          className="lg:hidden p-2 text-[#2B2620] hover:bg-brand-gold/5 rounded-full transition-colors"
         >
           <Menu className="w-6 h-6" />
         </button>

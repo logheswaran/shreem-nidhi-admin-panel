@@ -44,9 +44,21 @@ export const useApplicationActions = () => {
     }
   })
 
+  const requestInfoMutation = useMutation({
+    mutationFn: ({ id, message }) => memberService.requestMoreInfo(id, message),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['applications'] })
+      toast.success('Information request sent to applicant')
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Failed to send request')
+    }
+  })
+
   return {
     approve: approveMutation.mutateAsync,
     reject: rejectMutation.mutateAsync,
-    isLoading: approveMutation.isLoading || rejectMutation.isLoading
+    requestInfo: requestInfoMutation.mutateAsync,
+    isLoading: approveMutation.isLoading || rejectMutation.isLoading || requestInfoMutation.isLoading
   }
 }

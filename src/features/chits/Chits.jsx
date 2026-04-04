@@ -1,133 +1,165 @@
-import React, { useState } from 'react'
-import { Plus, Search, FilterX } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import React, { useState, useMemo } from 'react'
+import { Plus, Search, Filter, ArrowUpDown, TrendingUp, Users, Wallet, ShieldCheck, AlertCircle, Database, ArrowRight } from 'lucide-react'
 import { useChits } from './hooks'
 import ChitCard from './components/ChitCard'
-
-// Skeleton Loader Custom to Chits Layout
-const ChitsSkeleton = () => {
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-      {[1, 2, 3, 4, 5, 6].map(i => (
-        <div key={i} className="bg-white rounded-[2rem] border border-brand-gold/10 p-6 md:p-8 animate-pulse shadow-sm h-72">
-          <div className="w-2/3 h-6 bg-gray-200 rounded mb-4"></div>
-          <div className="flex gap-2 mb-6">
-            <div className="w-24 h-5 bg-gray-200 rounded"></div>
-            <div className="w-16 h-5 bg-gray-200 rounded"></div>
-          </div>
-          <div className="grid grid-cols-2 gap-4 flex-1">
-            <div className="w-full h-16 bg-gray-200 rounded-2xl"></div>
-            <div className="w-full h-16 bg-gray-200 rounded-2xl"></div>
-            <div className="w-full h-16 bg-gray-200 rounded-2xl col-span-2"></div>
-          </div>
-        </div>
-      ))}
-    </div>
-  )
-}
+import CreateChitModal from './components/CreateChitModal'
+import ChitQuickView from './components/ChitQuickView'
+import PremiumDropdown from '../../shared/components/ui/PremiumDropdown'
 
 const Chits = () => {
   const [filterStatus, setFilterStatus] = useState('all')
   const [searchQuery, setSearchQuery] = useState('')
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [selectedChit, setSelectedChit] = useState(null)
+  
+  const { data: chits = [], isLoading, isError } = useChits(filterStatus, searchQuery)
 
-  const { data: chits, isLoading, isError } = useChits(filterStatus, searchQuery)
+  // --- KPI Computation: Registry Standards --- //
+  const kpis = useMemo(() => {
+    const totalValue = chits.reduce((acc, c) => acc + (Number(c.monthly_contribution || 0) * Number(c.max_members || 0)), 0)
+    const activeCount = chits.filter(c => c.status === 'active').length
+    const forming = chits.filter(c => c.status === 'forming').length
+    return { total: chits.length, active: activeCount, forming, totalValue }
+  }, [chits])
+
+  const riskyChits = useMemo(() => 
+    chits.filter(c => c.default_count > 0 || c.health_status === 'CRITICAL'),
+    [chits]
+  )
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="w-10 h-10 border-4 border-brand-gold border-t-transparent rounded-full animate-spin shadow-lg"></div>
+      </div>
+    )
+  }
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-700 pb-20">
       
-      {/* Header */}
+      {/* 🚀 Header: Branded Chit Groups */}
       <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h2 className="text-4xl font-headline font-bold text-brand-navy">Chits Management</h2>
-          <p className="text-on-surface-variant font-body mt-2 opacity-70">
-            Control center for all active, forming, and completed chit operations.
-          </p>
+          <h2 className="text-4xl font-headline font-bold text-[#2B2620]">Chit Groups</h2>
+          <p className="text-on-surface-variant font-body mt-2 opacity-70">Operational registry for administrative group management.</p>
         </div>
-        
-        <Link 
-          to="/chits/new" // Keeping route open, assuming this was there or can be created later
-          className="heritage-gradient text-white px-8 py-3.5 rounded-[1.25rem] text-[10px] font-black uppercase tracking-[0.2em] shadow-xl flex items-center gap-3 hover:brightness-110 active:scale-95 transition-all"
+        <button 
+          onClick={() => setIsModalOpen(true)}
+          className="heritage-gradient px-8 py-3 text-white text-[10px] font-black uppercase tracking-widest rounded-full flex items-center gap-3 shadow-xl hover:brightness-110 transition-all active:scale-95"
         >
-          <Plus className="w-4 h-4" strokeWidth={3} />
-          Create Chit Protocol
-        </Link>
+          <Plus className="w-4 h-4" /> Launch New Group
+        </button>
       </header>
 
-      {/* Control Bar */}
-      <div className="bg-white p-4 rounded-[2rem] border border-brand-gold/10 shadow-sm flex flex-col md:flex-row items-center gap-4 mb-8">
-        <div className="relative w-full md:w-96 flex-1">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/50" />
+      {/* 📊 KPI Summary Cards: Dashboard Parity Pass */}
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-10">
+        {/* Total Chits */}
+        <div className="bg-white p-6 rounded-[2rem] border border-brand-gold/10 shadow-sm transition-all hover:shadow-md flex items-center gap-4">
+           <div className="p-4 rounded-full bg-brand-gold/10 text-brand-gold shrink-0">
+              <Database className="w-6 h-6" />
+           </div>
+            <div>
+               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/60 mb-1">Total Chits</p>
+               <p className="text-2xl font-headline font-bold text-[#2B2620]">{kpis.total}</p>
+            </div>
+        </div>
+
+        {/* Active Members/Assets */}
+        <div className="bg-white p-6 rounded-[2rem] border border-brand-gold/10 shadow-sm transition-all hover:shadow-md flex items-center gap-4 border-b-4 border-b-green-500/30">
+           <div className="p-4 rounded-full bg-green-500/10 text-green-500 shrink-0">
+              <ShieldCheck className="w-6 h-6" />
+           </div>
+            <div>
+               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/60 mb-1">Active Assets</p>
+               <p className="text-2xl font-headline font-bold text-[#2B2620]">{kpis.active}</p>
+            </div>
+        </div>
+
+        {/* Forming Phase */}
+        <div className="bg-white p-6 rounded-[2rem] border border-brand-gold/10 shadow-sm transition-all hover:shadow-md flex items-center gap-4 border-b-4 border-b-brand-gold/30">
+           <div className="p-4 rounded-full bg-brand-gold/10 text-brand-gold shrink-0">
+              <Users className="w-6 h-6" />
+           </div>
+            <div>
+               <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/60 mb-1">Forming Phase</p>
+               <p className="text-2xl font-headline font-bold text-[#2B2620]">{kpis.forming}</p>
+            </div>
+        </div>
+
+        {/* Total Value (Gold Inversion) */}
+        <div className="heritage-gradient p-6 rounded-[2rem] shadow-xl text-white flex items-center gap-4">
+           <div className="p-4 rounded-full bg-white/10 text-white shrink-0">
+              <Wallet className="w-6 h-6" />
+           </div>
+           <div>
+              <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/60 mb-1">Total Value</p>
+              <p className="text-2xl font-headline font-bold">₹{kpis.totalValue.toLocaleString()}</p>
+           </div>
+        </div>
+      </div>
+
+      {/* 🔍 Search & Filters: Standardized Density */}
+      <div className="mb-8 flex flex-col lg:flex-row gap-4 items-stretch lg:items-center">
+        <div className="flex-1 relative group">
+          <Search className="absolute left-5 top-1/2 -translate-y-1/2 text-brand-text/20 group-focus-within:text-brand-gold transition-colors w-4 h-4" />
           <input 
+            className="w-full bg-white/50 backdrop-blur-sm border-2 border-brand-gold/5 focus:border-brand-gold/30 rounded-2xl py-4 pl-12 pr-6 text-sm font-body focus:ring-0 focus:outline-none transition-all placeholder:text-brand-text/20 shadow-sm"
+            placeholder="Search Group Intelligence (Name, UUID)..." 
             type="text"
-            placeholder="Search by Chit UUID or Name..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-brand-ivory pl-11 pr-4 py-3 rounded-xl border border-brand-gold/20 focus:outline-none focus:border-brand-gold focus:ring-1 focus:ring-brand-gold text-sm font-body transition-all"
           />
         </div>
+        
+        <div className="flex gap-4">
+           <PremiumDropdown 
+             className="min-w-[160px]"
+             value={filterStatus}
+             onChange={(val) => setFilterStatus(val)}
+             options={[
+               { value: 'all', label: 'Any Status' },
+               { value: 'forming', label: 'Forming' },
+               { value: 'active', label: 'Active' },
+               { value: 'completed', label: 'Completed' }
+             ]}
+           />
 
-        <div className="flex items-center gap-2 p-1 bg-brand-ivory rounded-xl border border-brand-gold/20 w-full md:w-auto overflow-x-auto no-scrollbar">
-          {['all', 'forming', 'active', 'completed'].map((status) => (
-            <button
-              key={status}
-              onClick={() => setFilterStatus(status)}
-              className={`px-4 py-2 rounded-lg text-[10px] font-black uppercase tracking-widest whitespace-nowrap transition-all ${
-                filterStatus === status 
-                  ? 'bg-brand-navy text-white shadow-md' 
-                  : 'text-brand-text/50 hover:bg-brand-navy/5'
-              }`}
-            >
-              {status}
-            </button>
-          ))}
+           <PremiumDropdown 
+             className="min-w-[160px]"
+             placeholder="Newest First"
+             onChange={(val) => {}}
+             options={[
+               { value: 'newest', label: 'Newest First' },
+               { value: 'value', label: 'Highest Value' },
+               { value: 'name', label: 'Alphabetical' }
+             ]}
+           />
         </div>
+      </div>
 
-        {(filterStatus !== 'all' || searchQuery !== '') && (
-          <button 
-            onClick={() => { setFilterStatus('all'); setSearchQuery(''); }}
-            className="flex items-center gap-2 text-[10px] font-black uppercase tracking-widest text-brand-navy/50 hover:text-red-500 transition-colors px-4 py-3 shrink-0"
-          >
-            <FilterX className="w-4 h-4" />
-            Clear
-          </button>
+      {/* 📦 Content Grid: Optimized Proportions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 animate-in slide-in-from-bottom-2 duration-500">
+        {chits.map(chit => (
+          <ChitCard 
+            key={chit.id} 
+            chit={chit} 
+            onQuickView={(c) => setSelectedChit(c)}
+          />
+        ))}
+
+        {!isLoading && !isError && chits.length === 0 && (
+          <div className="col-span-full py-20 bg-brand-ivory/50 rounded-[2rem] border-2 border-dashed border-brand-gold/20 flex flex-col items-center justify-center text-center">
+            <AlertCircle className="w-12 h-12 text-brand-gold/30 mb-4" />
+            <p className="text-[#2B2620] font-bold text-lg">No Groups Found</p>
+            <p className="text-brand-text/50 text-[10px] font-black uppercase tracking-[0.2em] mt-2">Adjust filters or launch a new administrative cycle</p>
+          </div>
         )}
       </div>
 
-      {/* Body Area */}
-      {isError && (
-        <div className="bg-red-50 p-6 rounded-[2rem] border border-red-100 flex items-center justify-center min-h-64">
-           <p className="font-bold text-red-700">Failed to sync with operations database. Connection may be interrupted.</p>
-        </div>
-      )}
-
-      {isLoading && <ChitsSkeleton />}
-
-      {!isLoading && !isError && chits?.length === 0 && (
-        <div className="bg-white rounded-[2.5rem] p-12 text-center border border-brand-gold/10 shadow-sm flex flex-col items-center justify-center min-h-[400px]">
-          <div className="w-20 h-20 bg-brand-navy/5 rounded-full flex items-center justify-center mb-6">
-            <FilterX className="w-10 h-10 text-brand-navy/30" />
-          </div>
-          <h3 className="font-headline text-2xl font-bold text-brand-navy mb-2">No operations found.</h3>
-          <p className="text-brand-text/60 font-body mb-8 max-w-sm">
-            Try adjusting your search filters or status toggles to locate the chit you are looking for.
-          </p>
-          <button 
-            onClick={() => { setFilterStatus('all'); setSearchQuery(''); }}
-            className="text-[10px] font-black uppercase tracking-widest bg-brand-navy text-white px-8 py-3 rounded-xl hover:bg-brand-navy/90"
-          >
-            Clear All Filters
-          </button>
-        </div>
-      )}
-
-      {!isLoading && !isError && chits?.length > 0 && (
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {chits.map(chit => (
-            <ChitCard key={chit.id} chit={chit} />
-          ))}
-        </div>
-      )}
-
+      {/* 🔮 Overlays: Registry Standards */}
+      <CreateChitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <ChitQuickView isOpen={!!selectedChit} onClose={() => setSelectedChit(null)} chit={selectedChit} />
     </div>
   )
 }

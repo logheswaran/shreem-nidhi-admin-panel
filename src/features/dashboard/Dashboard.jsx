@@ -2,65 +2,72 @@ import React from 'react'
 import { useDashboardStats, useRecentLedger, useDashboardExtendedData } from './hooks'
 import StatsGrid from './components/StatsGrid'
 import AnalyticsCharts from './components/Charts'
-import LedgerTable from './components/LedgerTable'
 import CollectionHealth from './components/CollectionHealth'
 import DashboardSkeleton from './components/DashboardSkeleton'
-import { OverdueAlert, LoanHealth, PendingAppsBadge, ChitProgressTracker } from './components/NewDashboardSections'
+import { ChitProgressTracker } from './components/NewDashboardSections'
+import AlertsPanel from './components/AlertsPanel'
+import QuickActions from './components/QuickActions'
+import ActivityFeed from './components/ActivityFeed'
 
 const Dashboard = () => {
-  // Parallel Data Orchestration (Prompt 6.2)
   const { data: stats, isLoading: statsLoading, isError: statsError } = useDashboardStats()
   const { data: ledger, isLoading: ledgerLoading } = useRecentLedger()
   const { data: extended, isLoading: extendedLoading } = useDashboardExtendedData()
-  
   const loading = statsLoading || ledgerLoading || extendedLoading
+  const hasChits = (extended?.progress?.length || 0) > 0
+  const hasHealth = (extended?.health?.totalExpected || 0) > 0
+  const showMonitor = hasChits || hasHealth
 
-  // Skeleton Loader (Prompt 6.3)
   if (loading) return <DashboardSkeleton />
 
   return (
-    <div className="animate-in fade-in slide-in-from-bottom-4 duration-1000 space-y-12 pb-20">
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
+    <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 space-y-8 pb-20">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 mb-4">
         <div>
           <div className="flex items-center gap-3 mb-2">
-             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
-             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-[var(--text-secondary)] opacity-60">System Online</span>
+             <div className="w-2.5 h-2.5 rounded-full bg-green-500 animate-pulse shadow-[0_0_8px_rgba(34,197,94,0.4)]"></div>
+             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-gold opacity-80">Command Center Online</span>
           </div>
-          <h2 className="text-4xl font-headline font-bold text-[var(--text-primary)]">Executive Dashboard</h2>
-          <p className="text-[var(--text-secondary)] font-body mt-2 opacity-70">
-            Provably fair auditing and operational liquidity tracking.
+          <h2 className="text-4xl font-headline font-bold text-[#2B2620] tracking-tight">Executive Intelligence</h2>
+          <p className="text-brand-text/50 text-sm font-body mt-1">
+            Real-time liquidity monitoring and operational risk management.
           </p>
         </div>
       </header>
 
-      {/* KPI Stats Grid */}
-      <StatsGrid stats={stats} isError={statsError} />
+      {/* 1. Critical KPI Grid (5 metrics) */}
+      <StatsGrid stats={stats} extended={extended} isError={statsError} />
 
-      {/* Primary Intelligence Row (Prompt 4) */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <CollectionHealth data={extended?.health} />
-        <AnalyticsCharts ledger={ledger || []} />
-      </div>
-
-      {/* Alert & Monitoring Section (Prompt 7) */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
-        <div className="lg:col-span-2 space-y-8">
-           <ChitProgressTracker chits={extended?.progress} />
+      {/* 2. Urgent Intelligence Row (Alerts + Actions) */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        <div className="lg:col-span-2">
+          <AlertsPanel 
+            overdue={extended?.overdueDetailed} 
+            auctions={extended?.auctions} 
+          />
         </div>
-        <div className="space-y-8">
-           <PendingAppsBadge count={extended?.apps} />
+        <div>
+          <QuickActions />
         </div>
       </div>
 
-      {/* Global Audit Log */}
-      <div className="relative">
-        <div className="flex justify-between items-end mb-8 px-4">
-           <div>
-             <h3 className="font-headline text-2xl font-bold text-[var(--text-primary)]">Global Audit Log</h3>
-             <p className="text-[10px] font-black uppercase tracking-widest text-[var(--text-secondary)] opacity-60 mt-1">Real-time ledger transparency</p>
-           </div>
+      {/* 3. Analytics & Distribution */}
+      <AnalyticsCharts 
+        ledger={ledger || []} 
+        collectionHealth={extended?.health} 
+      />
+
+      {/* 4. Monitoring & Activity */}
+      <div className={`grid grid-cols-1 ${showMonitor ? 'lg:grid-cols-3' : 'grid-cols-1'} gap-6`}>
+        {showMonitor && (
+          <div className="lg:col-span-1 space-y-6">
+            {hasHealth && <CollectionHealth data={extended?.health} isLoading={extendedLoading} />}
+            {hasChits && <ChitProgressTracker chits={extended?.progress} />}
+          </div>
+        )}
+        <div className={showMonitor ? 'lg:col-span-2' : 'w-full'}>
+          <ActivityFeed ledger={ledger || []} />
         </div>
-        <LedgerTable ledgerData={ledger || []} />
       </div>
     </div>
   )

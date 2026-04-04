@@ -106,7 +106,7 @@ const PaymentGrid = () => {
             <ChevronLeft className="w-6 h-6" />
           </button>
           <div>
-            <h2 className="text-3xl font-headline font-bold text-brand-navy">{chit?.name}</h2>
+            <h2 className="text-3xl font-headline font-bold text-[#2B2620]">{chit?.name}</h2>
             <div className="flex items-center gap-2 text-[10px] uppercase font-black tracking-widest text-brand-gold opacity-60 mt-1">
               <Calendar className="w-3 h-3" /> Monthly Compliance Matrix
             </div>
@@ -116,15 +116,15 @@ const PaymentGrid = () => {
         <div className="flex items-center gap-4 bg-white p-3 rounded-2xl border border-brand-gold/5 shadow-sm">
            <div className="flex items-center gap-2 px-3">
               <div className="w-3 h-3 rounded-full bg-green-500"></div>
-              <span className="text-[10px] font-bold text-brand-navy/60 uppercase">Cleared</span>
+              <span className="text-[10px] font-bold text-[#2B2620]/60 uppercase">Cleared</span>
            </div>
            <div className="flex items-center gap-2 px-3">
               <div className="w-3 h-3 rounded-full bg-amber-400"></div>
-              <span className="text-[10px] font-bold text-brand-navy/60 uppercase">Pending</span>
+              <span className="text-[10px] font-bold text-[#2B2620]/60 uppercase">Pending</span>
            </div>
            <div className="flex items-center gap-2 px-3 border-r border-brand-gold/5 mr-2">
               <div className="w-3 h-3 rounded-full bg-red-500"></div>
-              <span className="text-[10px] font-bold text-brand-navy/60 uppercase">Overdue</span>
+              <span className="text-[10px] font-bold text-[#2B2620]/60 uppercase">Overdue</span>
            </div>
         </div>
       </header>
@@ -133,8 +133,8 @@ const PaymentGrid = () => {
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
-              <tr className="bg-brand-navy/[0.02]">
-                <th className="sticky left-0 z-20 bg-brand-navy/[0.02] px-8 py-6 text-[10px] font-black uppercase tracking-widest text-brand-text/40 border-b border-brand-gold/5">Delegate Participant</th>
+              <tr className="bg-[#2B2620]/[0.02]">
+                <th className="sticky left-0 z-20 bg-[#2B2620]/[0.02] px-8 py-6 text-[10px] font-black uppercase tracking-widest text-brand-text/40 border-b border-brand-gold/5">Delegate Participant</th>
                 {months.map(m => (
                   <th key={m} className="px-4 py-6 text-center text-[10px] font-black uppercase tracking-widest text-brand-text/40 border-b border-brand-gold/5 whitespace-nowrap min-w-[80px]">
                     Cycle {m}
@@ -147,11 +147,11 @@ const PaymentGrid = () => {
                 <tr key={member.id} className="hover:bg-brand-gold/[0.01] transition-colors group">
                   <td className="sticky left-0 z-10 bg-white group-hover:bg-brand-gold/[0.01] px-8 py-4 border-r border-brand-gold/5 shadow-[5px_0_10px_-5px_rgba(0,0,0,0.05)]">
                     <div className="flex items-center gap-4">
-                       <div className="w-8 h-8 rounded-xl bg-brand-navy text-white flex items-center justify-center font-bold text-xs">
+                       <div className="w-8 h-8 rounded-xl bg-[#2B2620] text-white flex items-center justify-center font-bold text-xs">
                           {member.profiles?.full_name?.[0]}
                        </div>
                        <div className="flex flex-col">
-                          <span className="text-sm font-bold text-brand-navy line-clamp-1">{member.profiles?.full_name}</span>
+                          <span className="text-sm font-bold text-[#2B2620] line-clamp-1">{member.profiles?.full_name}</span>
                           <span className="text-[10px] text-brand-text/30 font-bold tracking-tighter uppercase">{member.profiles?.mobile_number}</span>
                        </div>
                     </div>
@@ -183,11 +183,11 @@ const PaymentGrid = () => {
          {selectedCell && (
            <div className="space-y-6">
               <div className="flex items-center gap-6 p-6 bg-brand-gold/[0.03] rounded-3xl border border-brand-gold/5">
-                 <div className="w-16 h-16 rounded-2xl bg-brand-navy flex items-center justify-center text-white text-2xl font-bold">
+                 <div className="w-16 h-16 rounded-2xl bg-[#2B2620] flex items-center justify-center text-white text-2xl font-bold">
                     {selectedCell.member.profiles?.full_name?.[0]}
                  </div>
                  <div>
-                    <h4 className="text-2xl font-headline font-bold text-brand-navy">{selectedCell.member.profiles?.full_name}</h4>
+                    <h4 className="text-2xl font-headline font-bold text-[#2B2620]">{selectedCell.member.profiles?.full_name}</h4>
                     <p className="text-sm text-brand-gold font-bold tracking-widest uppercase opacity-60">Cycle Reference: Month {selectedCell.monthNum}</p>
                  </div>
               </div>
@@ -195,7 +195,7 @@ const PaymentGrid = () => {
               <div className="grid grid-cols-2 gap-4">
                  <div className="bg-white p-6 rounded-3xl border border-brand-gold/5 shadow-sm">
                     <span className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">Required Installment</span>
-                    <span className="text-2xl font-headline font-bold text-brand-navy">₹{Number(selectedCell.contribution.amount_due).toLocaleString()}</span>
+                    <span className="text-2xl font-headline font-bold text-[#2B2620]">₹{Number(selectedCell.contribution.amount_due).toLocaleString()}</span>
                  </div>
                  <div className="bg-white p-6 rounded-3xl border border-brand-gold/5 shadow-sm">
                     <span className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">Current Status</span>
@@ -226,8 +226,8 @@ const PaymentGrid = () => {
                            onClick={() => setPaymentMode(mode)}
                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
                              paymentMode === mode 
-                               ? 'bg-brand-navy text-white shadow-md' 
-                               : 'bg-white border border-brand-gold/10 text-brand-navy hover:bg-brand-gold/5'
+                               ? 'bg-[#2B2620] text-white shadow-md' 
+                               : 'bg-white border border-brand-gold/10 text-[#2B2620] hover:bg-brand-gold/5'
                            }`}
                          >
                            {mode}
@@ -243,7 +243,7 @@ const PaymentGrid = () => {
                        </label>
                        <input 
                          type="text" 
-                         className="w-full bg-white border border-brand-gold/10 rounded-xl px-4 py-3 text-sm font-bold text-brand-navy focus:outline-none focus:border-brand-gold/30"
+                         className="w-full bg-white border border-brand-gold/10 rounded-xl px-4 py-3 text-sm font-bold text-[#2B2620] focus:outline-none focus:border-brand-gold/30"
                          placeholder="Enter reference details..."
                          value={paymentRef}
                          onChange={(e) => setPaymentRef(e.target.value)}

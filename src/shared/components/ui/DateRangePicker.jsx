@@ -39,7 +39,7 @@ const DateRangePicker = ({ startDate, endDate, onChange }) => {
     <div className="relative" ref={containerRef}>
       <button 
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-[#16213E] border-[0.5px] border-brand-gold/20 rounded-full shadow-sm hover:border-brand-gold/40 transition-all font-body text-[13px] text-brand-navy dark:text-[#F0EDD4]"
+        className="flex items-center gap-4 px-6 py-3 bg-white dark:bg-[#1A1A1A] border-[0.5px] border-brand-gold/20 rounded-full shadow-sm hover:border-brand-gold/40 transition-all font-body text-[13px] text-[#2B2620] dark:text-[#F0EDD4]"
       >
         <Calendar className="w-4 h-4 text-[#BA7517]" />
         <div className="flex items-center gap-2">
@@ -50,12 +50,12 @@ const DateRangePicker = ({ startDate, endDate, onChange }) => {
       </button>
 
       {isOpen && (
-        <div className="absolute top-full mt-4 left-0 z-50 bg-white dark:bg-[#16213E] border border-brand-gold/10 rounded-3xl shadow-2xl p-6 min-w-[320px] animate-in fade-in zoom-in duration-200">
+        <div className="absolute top-full mt-4 left-0 z-50 bg-white dark:bg-[#1A1A1A] border border-brand-gold/10 rounded-3xl shadow-2xl p-6 min-w-[320px] animate-in fade-in zoom-in duration-200">
           <div className="flex justify-between items-center mb-6">
             <button onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="p-2 hover:bg-brand-gold/5 rounded-full text-brand-gold">
               <ChevronLeft className="w-4 h-4" />
             </button>
-            <h4 className="font-headline font-bold text-brand-navy dark:text-[#F0EDD4] uppercase tracking-widest text-[11px]">
+            <h4 className="font-headline font-bold text-[#2B2620] dark:text-[#F0EDD4] uppercase tracking-widest text-[11px]">
               {format(currentMonth, 'MMMM yyyy')}
             </h4>
             <button onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="p-2 hover:bg-brand-gold/5 rounded-full text-brand-gold">
@@ -87,7 +87,7 @@ const DateRangePicker = ({ startDate, endDate, onChange }) => {
                     h-10 w-10 text-[11px] rounded-full flex items-center justify-center transition-all
                     ${isSelected ? 'bg-[#BA7517] text-white font-bold shadow-lg shadow-brand-gold/20' : ''}
                     ${isInRange && !isSelected ? 'bg-[rgba(186,117,23,0.25)] text-[#BA7517] font-semibold' : ''}
-                    ${!isSelected && !isInRange ? 'hover:bg-brand-gold/5 text-brand-navy dark:text-[#F0EDD4]/60' : ''}
+                    ${!isSelected && !isInRange ? 'hover:bg-brand-gold/5 text-[#2B2620] dark:text-[#F0EDD4]/60' : ''}
                   `}
                 >
                   {format(day, 'd')}

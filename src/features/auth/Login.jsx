@@ -80,7 +80,7 @@ const Login = () => {
           <div className="w-16 h-16 heritage-gradient rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg">
             <span className="text-white text-2xl font-headline font-bold">S</span>
           </div>
-          <h1 className="text-3xl font-headline font-bold text-brand-navy">Shreemnidhi</h1>
+          <h1 className="text-3xl font-headline font-bold text-[#2B2620]">Shreemnidhi</h1>
           <p className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-gold mt-1">
             Admin Control Panel
           </p>
@@ -189,7 +189,7 @@ const Login = () => {
               <button
                 type="button"
                 onClick={() => { setStep(1); setOtp(''); }}
-                className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 hover:text-brand-navy transition-colors"
+                className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 hover:text-[#2B2620] transition-colors"
               >
                 ← Change Number
               </button>
