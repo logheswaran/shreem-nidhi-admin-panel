@@ -3,6 +3,7 @@ import { X, Loader2, User, Phone, Mail, LayoutGrid, CheckCircle2 } from 'lucide-
 import Modal from '../../../shared/components/ui/Modal'
 import { getChits } from '../../chits/api'
 import toast from 'react-hot-toast'
+import PremiumDropdown from '../../../shared/components/ui/PremiumDropdown'
 
 const MemberFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loading = false }) => {
   const [formData, setFormData] = useState({
@@ -74,7 +75,7 @@ const MemberFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loadin
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Full Name */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1">Full Identity</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/60 ml-1">Full Identity</label>
             <div className="relative group">
               <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/30 group-focus-within:text-brand-gold transition-colors" />
               <input
@@ -90,7 +91,7 @@ const MemberFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loadin
 
           {/* Phone Number */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1">Secure Contact</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/60 ml-1">Secure Contact</label>
             <div className="relative group">
               <Phone className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/30 group-focus-within:text-brand-gold transition-colors" />
               <input
@@ -107,7 +108,7 @@ const MemberFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loadin
 
           {/* Email */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1">Institutional Email</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/60 ml-1">Institutional Email</label>
             <div className="relative group">
               <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/30 group-focus-within:text-brand-gold transition-colors" />
               <input
@@ -121,32 +122,21 @@ const MemberFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loadin
             </div>
           </div>
 
-          {/* Chit Assignment */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1">Heritage Portfolio</label>
-            <div className="relative group">
-              <LayoutGrid className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/30 group-focus-within:text-brand-gold transition-colors pointer-events-none" />
-              <select
-                name="chit_id"
-                value={formData.chit_id}
-                onChange={handleChange}
-                className="w-full bg-brand-ivory/50 border-2 border-brand-gold/5 focus:border-brand-gold/30 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-body focus:outline-none transition-all appearance-none cursor-pointer"
-              >
-                <option value="">Unassigned</option>
-                {fetchingChits ? (
-                  <option disabled>Loading portfolios...</option>
-                ) : (
-                  chits.map(chit => (
-                    <option key={chit.id} value={chit.id}>{chit.name} (₹{Number(chit.amount).toLocaleString()})</option>
-                  ))
-                )}
-              </select>
-            </div>
-          </div>
+// ... at around line 125
+          <PremiumDropdown 
+            label="Heritage Portfolio"
+            placeholder={fetchingChits ? "Loading portfolios..." : "Unassigned"}
+            value={formData.chit_id}
+            onChange={(val) => setFormData(prev => ({ ...prev, chit_id: val }))}
+            options={chits.map(chit => ({
+              value: chit.id,
+              label: `${chit.name} (₹${Number(chit.amount).toLocaleString()})`
+            }))}
+          />
 
           {/* Status */}
           <div className="space-y-2 md:col-span-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1">Standing Status</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/60 ml-1">Standing Status</label>
             <div className="flex gap-4">
               {['active', 'inactive', 'defaulter'].map((status) => (
                 <button
@@ -173,7 +163,7 @@ const MemberFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loadin
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-8 py-4 bg-brand-ivory text-brand-navy text-[10px] font-black uppercase tracking-widest rounded-2xl border border-brand-gold/10 hover:bg-brand-gold/5 transition-all"
+            className="flex-1 px-8 py-4 bg-brand-ivory text-[#2B2620] text-[10px] font-black uppercase tracking-widest rounded-2xl border border-brand-gold/10 hover:bg-brand-gold/5 transition-all"
           >
             Cancel
           </button>

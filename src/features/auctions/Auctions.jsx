@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, useMemo } from 'react'
 import { Gavel, Search, Plus, Calendar, Users, Trophy, ChevronRight, Gavel as GavelIcon, Info, CheckCircle2, History } from 'lucide-react'
 import { useAuctionRounds, useBids, useAuctionActions } from './hooks'
 import { useChits } from '../chits/hooks'
@@ -20,12 +20,17 @@ const Auctions = () => {
   const [selectedRoundId, setSelectedRoundId] = useState(null)
   const { data: bids = [], isLoading: bidsLoading } = useBids(selectedRoundId)
   
-  const { closeAuction, isProcessing } = useAuctionActions()
+  const { openAuction, closeAuction, isProcessing } = useAuctionActions()
   
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isOpenConfirmModal, setIsOpenConfirmModal] = useState(false)
   const [confirmClose, setConfirmClose] = useState({ isOpen: false, round: null })
   const [confirmCancel, setConfirmCancel] = useState({ isOpen: false, round: null })
-  const [noBidsWarning, setNoBidsWarning] = useState({ isOpen: false, round: null })
+
+  const nextMonth = useMemo(() => {
+    if (!rounds.length) return 1
+    return Math.max(...rounds.map(r => r.month_number)) + 1
+  }, [rounds])
 
   const handleAuditBids = (round) => {
     setSelectedRoundId(round.id)
@@ -37,48 +42,37 @@ const Auctions = () => {
     try {
       await closeAuction(confirmClose.round.id)
       setConfirmClose({ isOpen: false, round: null })
-      setNoBidsWarning({ isOpen: false, round: null })
       setIsModalOpen(false)
-    } catch (error) {
-      // toast handled in hook
-    }
+    } catch (error) {}
   }
 
   const handleCancelAuction = async () => {
     if (!confirmCancel.round) return
     try {
-      toast.loading('Cancelling auction...', { id: 'cancel' })
       const { error } = await supabase.rpc('admin_cancel_auction', { p_auction_id: confirmCancel.round.id })
       if (error) throw error
-      toast.success('Auction Cancelled!', { id: 'cancel' })
+      toast.success('Auction Cancelled!')
       setConfirmCancel({ isOpen: false, round: null })
       setIsModalOpen(false)
-      // Ideally trigger a refetch here
     } catch (error) {
-       toast.error(error.message || 'Failed to cancel', { id: 'cancel' })
+       toast.error(error.message || 'Failed to cancel')
     }
+  }
+
+  const handleOpenAuction = async () => {
+    try {
+      await openAuction({ chitId: activeChitId, month: nextMonth })
+      setIsOpenConfirmModal(false)
+    } catch (err) {}
   }
 
   const handleExecuteRequest = (numBids) => {
     const roundToClose = rounds.find(r => r.id === selectedRoundId)
-    if (numBids === 0) {
-      setNoBidsWarning({ isOpen: true, round: roundToClose })
-    } else {
-      setConfirmClose({ isOpen: true, round: roundToClose })
-    }
+    setConfirmClose({ isOpen: true, round: roundToClose })
   }
 
   const activeChit = auctionChits.find(c => c.id === activeChitId)
   const hasOpenAuction = rounds.some(r => r.status === 'open')
-
-  const handleOpenAuction = () => {
-    if (hasOpenAuction) {
-      toast.error('Sequence Lock: Close the current open auction before starting a new one.')
-      return
-    }
-    // Launch logic here or open a form...
-    toast.error('Launch form not connected yet')
-  }
 
   const columns = [
     { 
@@ -89,7 +83,7 @@ const Auctions = () => {
             <GavelIcon className="w-5 h-5" />
           </div>
           <div>
-            <p className="font-headline font-bold text-brand-navy capitalize">Cycle Month {row.month_number}</p>
+            <p className="font-headline font-bold text-[#2B2620] capitalize">Cycle Month {row.month_number}</p>
             <p className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest">Opened: {new Date(row.opened_at).toLocaleDateString()}</p>
           </div>
         </div>
@@ -121,7 +115,7 @@ const Auctions = () => {
           <div className="w-8 h-8 rounded-full bg-brand-gold/5 flex items-center justify-center font-bold text-xs">
             {row.chit_members?.profiles?.full_name?.[0]}
           </div>
-          <span className="font-bold text-brand-navy">{row.chit_members?.profiles?.full_name}</span>
+          <span className="font-bold text-[#2B2620]">{row.chit_members?.profiles?.full_name}</span>
         </div>
       )
     },
@@ -133,16 +127,16 @@ const Auctions = () => {
     <div className="animate-in fade-in duration-700">
       <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-end gap-6">
         <div>
-          <h2 className="text-4xl font-headline font-bold text-brand-navy">Auction Orchestration</h2>
+          <h2 className="text-4xl font-headline font-bold text-[#2B2620]">Auction Orchestration</h2>
           <p className="text-on-surface-variant font-body mt-2 opacity-70">Execute competitive bidding and dividend distribution for Traditional schemes.</p>
         </div>
         <div className="flex gap-4">
            {auctionChits.length > 0 && (
              <button 
-               onClick={handleOpenAuction}
+               onClick={() => setIsOpenConfirmModal(true)}
                className={`heritage-gradient text-white px-10 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest shadow-xl hover:brightness-110 active:scale-95 transition-all flex items-center gap-3 ${hasOpenAuction ? 'opacity-50 cursor-not-allowed' : ''}`}
              >
-               <Plus className="w-4 h-4" /> Open New Window
+               <Plus className="w-4 h-4" /> Open Cycle {nextMonth}
              </button>
            )}
         </div>
@@ -154,7 +148,7 @@ const Auctions = () => {
            <button 
             key={c.id} 
             onClick={() => setActiveChitId(c.id)}
-            className={`pb-5 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative whitespace-nowrap ${activeChitId === c.id ? 'text-brand-navy' : 'text-brand-text/30 hover:text-brand-gold'}`}
+            className={`pb-5 text-[10px] font-black uppercase tracking-[0.2em] transition-all relative whitespace-nowrap ${activeChitId === c.id ? 'text-[#2B2620]' : 'text-brand-text/30 hover:text-brand-gold'}`}
            >
              {c.name}
              {activeChitId === c.id && <div className="absolute bottom-[-2px] left-0 w-full h-1 heritage-gradient rounded-full shadow-lg shadow-brand-gold/30"></div>}
@@ -183,29 +177,24 @@ const Auctions = () => {
       </Modal>
 
       <ConfirmDialog 
-        isOpen={confirmClose.isOpen}
-        onClose={() => setConfirmClose({ isOpen: false, round: null })}
-        onConfirm={handleCloseAuction}
-        title="Execute Laureate Admission"
-        message="This action is irreversible. The highest bidder will be awarded the prize and dividends will be credited to all active members in the institutional ledger."
+        isOpen={isOpenConfirmModal}
+        onClose={() => setIsOpenConfirmModal(false)}
+        onConfirm={handleOpenAuction}
+        title="Initialize Auction Cycle"
+        message={`Authorize the commencement of Cycle ${nextMonth} for ${activeChit?.name}. This will activate the live bidding node for all eligible institutional members.`}
         intent="brand"
-        confirmText="Execute"
+        confirmText="Launch Cycle"
         loading={isProcessing}
       />
 
       <ConfirmDialog 
-        isOpen={noBidsWarning.isOpen}
-        onClose={() => setNoBidsWarning({ isOpen: false, round: null })}
-        onConfirm={() => {
-           // We would call select_random_winner RPC here if it existed.
-           // For traditional, Admin will run this manually or wait.
-           toast.error('No random winner selected: Action must be handled manually.')
-           setNoBidsWarning({ isOpen: false, round: null })
-        }}
-        title="⚠ No Bids Received"
-        message="No bids have been placed for this cycle. You can either wait for bids or select a winner manually using the Random Draw."
-        intent="danger"
-        confirmText="Select random winner instead"
+        isOpen={confirmClose.isOpen}
+        onClose={() => setConfirmClose({ isOpen: false, round: null })}
+        onConfirm={handleCloseAuction}
+        title="Execute Laureate Finalization"
+        message="This action activates the institutional disbursement protocol. The lowest bidder will be awarded the prize, and the remaining pot (dividend) will be automatically credited to all non-winning members in the digital ledger."
+        intent="brand"
+        confirmText="Commit Finalization"
         loading={isProcessing}
       />
 
@@ -213,10 +202,10 @@ const Auctions = () => {
         isOpen={confirmCancel.isOpen}
         onClose={() => setConfirmCancel({ isOpen: false, round: null })}
         onConfirm={handleCancelAuction}
-        title="Admin Override: Cancel Auction"
-        message="DANGER: This will instantly close the auction without selecting a winner or distributing dividends. This action is irreversible and should only be used in emergencies."
+        title="Emergency Override: Cancel"
+        message="DANGER: This protocol instantly voids the auction cycle without award or distribution. Use only for documented emergencies."
         intent="danger"
-        confirmText="Force Cancel"
+        confirmText="Force Void"
       />
     </div>
   )

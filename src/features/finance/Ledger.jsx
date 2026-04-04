@@ -46,6 +46,7 @@ const Ledger = () => {
   const [showAddModal, setShowAddModal] = useState(false)
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteTargetId, setDeleteTargetId] = useState(null)
+  const [memberDrilldown, setMemberDrilldown] = useState(null) // { userId, fullName }
 
   // Overrides
   const [reverseTarget, setReverseTarget] = useState(null)
@@ -110,7 +111,7 @@ const Ledger = () => {
           </div>
           <div className="flex flex-col">
             <span className="font-mono text-[10px] font-bold text-brand-text/30 uppercase tracking-tighter">REF-{row.id.slice(0, 8).toUpperCase()}</span>
-            <span className="text-[10px] font-black uppercase tracking-widest text-brand-navy truncate max-w-[100px]">{row.reference_type?.replace('_', ' ') || 'General'}</span>
+            <span className="text-[10px] font-black uppercase tracking-widest text-[#2B2620] truncate max-w-[100px]">{row.reference_type?.replace('_', ' ') || 'General'}</span>
           </div>
         </div>
       )
@@ -118,10 +119,16 @@ const Ledger = () => {
     {
       header: 'Account Identity',
       render: (row) => (
-        <div className="flex flex-col">
-          <span className="text-xs font-bold text-brand-navy">{row.profiles?.full_name || 'System Protocol'}</span>
+        <button 
+          onClick={(e) => {
+            e.stopPropagation()
+            setMemberDrilldown({ userId: row.user_id, fullName: row.profiles?.full_name })
+          }}
+          className="flex flex-col text-left group"
+        >
+          <span className="text-xs font-bold text-[#2B2620] group-hover:text-brand-gold transition-colors">{row.profiles?.full_name || 'System Protocol'}</span>
           <span className="text-[9px] text-brand-text/30 font-bold tracking-widest uppercase">{row.chits?.name || 'Treasury'}</span>
-        </div>
+        </button>
       )
     },
     {
@@ -282,13 +289,13 @@ const Ledger = () => {
             <History className="w-5 h-5 text-brand-gold" />
             <span className="text-[10px] font-black uppercase tracking-[0.3em] text-brand-gold">Financial Protocol</span>
           </div>
-          <h2 className="text-4xl font-headline font-bold text-brand-navy">Institutional Ledger</h2>
+          <h2 className="text-4xl font-headline font-bold text-[#2B2620]">Institutional Ledger</h2>
           <p className="text-on-surface-variant font-body mt-2 opacity-70">Audited movements across the trust's digital vaults.</p>
         </div>
         <div className="flex gap-4">
           <div className="flex bg-white rounded-full p-1 border border-brand-gold/10 shadow-sm">
-            <button onClick={handleCSVExport} className="px-4 py-2 text-[8px] font-black uppercase tracking-widest text-brand-navy hover:bg-brand-gold/5 rounded-full transition-all">CSV</button>
-            <button onClick={handlePDFExport} className="px-4 py-2 text-[8px] font-black uppercase tracking-widest text-brand-navy hover:bg-brand-gold/5 rounded-full transition-all">PDF Report</button>
+            <button onClick={handleCSVExport} className="px-4 py-2 text-[8px] font-black uppercase tracking-widest text-[#2B2620] hover:bg-brand-gold/5 rounded-full transition-all">CSV</button>
+            <button onClick={handlePDFExport} className="px-4 py-2 text-[8px] font-black uppercase tracking-widest text-[#2B2620] hover:bg-brand-gold/5 rounded-full transition-all">PDF Report</button>
           </div>
           <button
             onClick={() => setShowAddModal(true)}
@@ -311,7 +318,7 @@ const Ledger = () => {
               <item.icon className={`w-8 h-8 ${item.color}`} />
             </div>
             <div>
-              <p className={`text-2xl font-headline font-bold text-brand-navy`}>₹{Math.abs(item.value).toLocaleString()}</p>
+              <p className={`text-2xl font-headline font-bold text-[#2B2620]`}>₹{Math.abs(item.value).toLocaleString()}</p>
               <p className="text-[10px] font-black uppercase tracking-widest text-brand-gold/60 mt-1">{item.label}</p>
             </div>
           </div>
@@ -341,8 +348,8 @@ const Ledger = () => {
                   key={type}
                   onClick={() => setTypeFilter(type)}
                   className={`px-5 py-2 rounded-lg text-[9px] font-black uppercase tracking-[0.15em] transition-all ${typeFilter === type
-                      ? 'bg-white text-brand-navy shadow-sm'
-                      : 'text-brand-text/40 hover:text-brand-navy'
+                      ? 'bg-white text-[#2B2620] shadow-sm'
+                      : 'text-brand-text/40 hover:text-[#2B2620]'
                     }`}
                 >
                   {type}
@@ -373,9 +380,9 @@ const Ledger = () => {
       </div>
 
       <footer className="mt-16 text-center">
-        <div className="inline-flex items-center gap-4 px-8 py-3.5 bg-brand-navy/5 rounded-full border border-brand-gold/10 opacity-60 grayscale hover:grayscale-0 transition-all duration-1000">
+        <div className="inline-flex items-center gap-4 px-8 py-3.5 bg-[#2B2620]/5 rounded-full border border-brand-gold/10 opacity-60 grayscale hover:grayscale-0 transition-all duration-1000">
           <ShieldCheck className="w-5 h-5 text-brand-gold" />
-          <span className="text-[10px] font-black uppercase tracking-[0.4em] text-brand-navy">Cryptographic Proof Verified at Institutional Grade</span>
+          <span className="text-[10px] font-black uppercase tracking-[0.4em] text-[#2B2620]">Cryptographic Proof Verified at Institutional Grade</span>
         </div>
       </footer>
 
@@ -400,6 +407,21 @@ const Ledger = () => {
         onClose={() => setSelectedEntry(null)}
         entry={selectedEntry}
       />
+
+      <Modal
+        isOpen={!!memberDrilldown}
+        onClose={() => setMemberDrilldown(null)}
+        title={`${memberDrilldown?.fullName}'s Institutional Ledger`}
+        maxWidth="max-w-6xl"
+      >
+        <div className="p-4">
+           <DataTable 
+             columns={columns.filter(c => c.header !== 'Account Identity')} 
+             data={ledger.filter(l => l.user_id === memberDrilldown?.userId)} 
+             loading={loading}
+           />
+        </div>
+      </Modal>
 
       <ConfirmDialog
         isOpen={showDeleteConfirm}

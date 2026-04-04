@@ -1,14 +1,20 @@
 import React from 'react'
 
 const CollectionHealth = ({ data, isLoading }) => {
-  if (isLoading || !data) return (
-    <div className="bg-[var(--bg-card)] rounded-[2rem] p-8 border border-brand-gold/10 shadow-sm animate-pulse h-[400px]">
-      <div className="h-6 bg-gray-200 w-1/3 mb-8 rounded"></div>
-      <div className="space-y-4">
-        {[1,2,3].map(i => <div key={i} className="h-12 bg-gray-100 rounded-xl"></div>)}
+  if (isLoading) {
+    return (
+      <div className="bg-[var(--bg-card)] rounded-[2rem] p-6 border border-brand-gold/10 shadow-sm animate-pulse">
+        <div className="h-4 bg-[#EAE6D9] w-1/3 mb-6 rounded-full"></div>
+        <div className="flex gap-4">
+          {[1,2,3].map(i => <div key={i} className="h-10 grow bg-[#EAE6D9] rounded-xl"></div>)}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  if (!data || data.totalExpected === 0) {
+    return null
+  }
 
   const { totalExpected, collected, outstanding, chitProgress, usersYetToPay } = data
 

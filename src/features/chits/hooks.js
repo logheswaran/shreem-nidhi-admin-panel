@@ -2,7 +2,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import toast from 'react-hot-toast'
 import {
   getChits,
+  getChitById,
+  getChitFullDetails,
   getActiveAuctionRound,
+  createChit,
   startMonth,
   selectWinner,
   openAuction,
@@ -32,19 +35,41 @@ export const useChits = (filterStatus = 'all', searchQuery = '') => {
 
       return data
     },
-    // Auto refresh chits table frequently since multiple admins might be working
-    refetchInterval: 30000 
+    refetchInterval: 60000, // Sync every minute
+    staleTime: 30000
+  })
+}
+
+export const useChitDetails = (id) => {
+  return useQuery({
+    queryKey: ['chit', id],
+    queryFn: () => getChitFullDetails(id),
+    enabled: !!id,
+    staleTime: 30000
   })
 }
 
 // --- MUTATIONS --- //
+
+export const useCreateChit = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: createChit,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chits'] })
+      toast.success('Chit protocol initialized successfully.')
+    },
+    onError: (err) => {
+      toast.error(`Creation failed: ${err.message}`)
+    }
+  })
+}
 
 export const useChitActions = () => {
   const queryClient = useQueryClient()
 
   return useMutation({
     mutationFn: async ({ actionType, payload }) => {
-      // Payload for closeAuction is chitId since we do backend lookup
       const { chitId, month } = payload
       
       switch (actionType) {
@@ -73,7 +98,9 @@ export const useChitActions = () => {
       }
     },
     onSuccess: (_, variables) => {
+      // Invalidate both listing and specific detail caches
       queryClient.invalidateQueries({ queryKey: ['chits'] })
+      queryClient.invalidateQueries({ queryKey: ['chit'] }) 
       queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] })
 
       const msgs = {

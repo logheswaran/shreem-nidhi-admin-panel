@@ -2,23 +2,37 @@ import React from 'react'
 
 const StatusBadge = ({ status }) => {
   const styles = {
-    pending: 'bg-surface-container-high text-on-surface-variant',
-    paid: 'bg-secondary-container/30 text-secondary',
-    active: 'bg-primary-container/10 text-primary-container',
-    completed: 'bg-brand-navy/10 text-brand-navy',
-    won: 'bg-brand-gold/10 text-brand-gold',
-    rejected: 'bg-red-100 text-red-600',
-    verified: 'bg-green-100 text-green-600',
-    approved: 'bg-secondary-container/30 text-secondary',
-    open: 'bg-brand-gold/10 text-brand-gold',
-    closed: 'bg-surface-container-highest text-on-surface-variant',
+    // Basic States: Refactored to Heritage Ivory
+    pending: 'bg-brand-ivory text-[#2B2620]/60 border-brand-gold/10',
+    active: 'bg-emerald-50 text-emerald-700 border-emerald-100 shadow-sm shadow-emerald-50',
+    completed: 'bg-brand-gold text-white border-brand-gold shadow-gold',
+    
+    // Lifecycle States
+    forming: 'bg-brand-ivory text-brand-gold border-brand-gold/20',
+    winner: 'bg-brand-gold text-white shadow-gold border-brand-gold',
+    participant: 'bg-brand-ivory text-[#2B2620]/70 border-brand-gold/10',
+    
+    // Results
+    won: 'bg-brand-gold/10 text-brand-gold border-brand-gold/20',
+    rejected: 'bg-red-50 text-red-600 border-red-100',
+    verified: 'bg-emerald-50/50 text-emerald-600 border-emerald-100',
+    approved: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    
+    // Financial Health
+    at_risk: 'bg-amber-50 text-amber-600 border-amber-100',
+    critical: 'bg-red-50 text-red-600 border-red-100',
+    
+    // Auction
+    open: 'bg-brand-gold/10 text-brand-gold border-brand-gold/20',
+    closed: 'bg-brand-ivory text-[#2B2620]/40 border-brand-gold/10',
   }
 
-  const label = status?.charAt(0).toUpperCase() + status?.slice(1)
+  const normalizedStatus = status?.toLowerCase() || 'unknown'
+  const displayLabel = status?.replace(/_/g, ' ') || 'Unknown'
 
   return (
-    <span className={`px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${styles[status?.toLowerCase()] || styles.pending}`}>
-      {label || 'Unknown'}
+    <span className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.25em] transition-all duration-500 whitespace-nowrap shadow-sm border ${styles[normalizedStatus] || 'bg-brand-ivory text-[#2B2620]/40 border-brand-gold/10'}`}>
+      {displayLabel}
     </span>
   )
 }

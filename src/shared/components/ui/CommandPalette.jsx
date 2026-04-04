@@ -58,7 +58,7 @@ const CommandPalette = ({ isOpen, onClose }) => {
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             onClick={onClose}
-            className="fixed inset-0 bg-brand-navy/40 backdrop-blur-sm z-[100]"
+            className="fixed inset-0 bg-[#2B2620]/40 backdrop-blur-sm z-[100]"
           />
           <motion.div 
             initial={{ opacity: 0, scale: 0.95, y: -20, x: '-50%' }}
@@ -74,7 +74,7 @@ const CommandPalette = ({ isOpen, onClose }) => {
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Search command or navigate... (e.g., 'members')"
-                className="flex-1 bg-transparent border-none focus:ring-0 text-base font-body text-brand-navy placeholder:text-brand-text/30 outline-none"
+                className="flex-1 bg-transparent border-none focus:ring-0 text-base font-body text-[#2B2620] placeholder:text-brand-text/30 outline-none"
               />
               <button onClick={onClose} className="p-1 rounded-full hover:bg-brand-gold/10 text-brand-text/40 hover:text-brand-gold transition-colors">
                  <X className="w-5 h-5" />
@@ -101,10 +101,10 @@ const CommandPalette = ({ isOpen, onClose }) => {
                     onClick={() => handleSelect(link.path)}
                     className="w-full flex items-center gap-3 p-3 rounded-2xl hover:bg-brand-gold/5 transition-colors text-left group"
                   >
-                    <div className="w-8 h-8 rounded-full bg-brand-ivory flex items-center justify-center text-brand-gold/60 group-hover:text-brand-gold group-hover:bg-brand-gold/10 transition-colors border border-brand-gold/5">
-                      {link.icon}
+                    <div className="flex items-center gap-3">
+                      <link.icon className="w-4 h-4 text-brand-gold" />
+                      <span className="font-headline font-bold text-sm text-[#2B2620]">{link.label}</span>
                     </div>
-                    <span className="font-headline font-bold text-sm text-brand-navy">{link.label}</span>
                   </button>
                 ))
               ) : (
@@ -113,9 +113,11 @@ const CommandPalette = ({ isOpen, onClose }) => {
                 </div>
               )}
             </div>
-            <div className="bg-brand-ivory p-3 border-t border-brand-gold/10 flex justify-between items-center text-[10px] text-brand-text/40 font-bold">
-              <span>Use <kbd className="bg-white px-1.5 py-0.5 rounded shadow-sm border border-brand-gold/10 font-mono text-brand-navy">↑</kbd> <kbd className="bg-white px-1.5 py-0.5 rounded shadow-sm border border-brand-gold/10 font-mono text-brand-navy">↓</kbd> to navigate</span>
-              <span><kbd className="bg-white px-1.5 py-0.5 rounded shadow-sm border border-brand-gold/10 font-mono text-brand-navy">ESC</kbd> to close</span>
+            <div className="p-4 border-t border-brand-gold/5 bg-brand-ivory/50 flex items-center justify-between text-[10px] font-bold text-brand-text/40 uppercase tracking-widest">
+              <div className="flex gap-4">
+                <span>Use <kbd className="bg-white px-1.5 py-0.5 rounded shadow-sm border border-brand-gold/10 font-mono text-[#2B2620]">↑</kbd> <kbd className="bg-white px-1.5 py-0.5 rounded shadow-sm border border-brand-gold/10 font-mono text-[#2B2620]">↓</kbd> to navigate</span>
+                <span><kbd className="bg-white px-1.5 py-0.5 rounded shadow-sm border border-brand-gold/10 font-mono text-[#2B2620]">ESC</kbd> to close</span>
+              </div>
             </div>
           </motion.div>
         </>

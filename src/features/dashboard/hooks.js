@@ -12,7 +12,11 @@ import {
   selectWinner,
   openAuction,
   closeAuction,
-  processMaturity
+  processMaturity,
+  getTodayCollection,
+  getUpcomingAuctions,
+  getCashFlowSummary,
+  getOverdueMembersDetailed
 } from './api'
 
 // --- QUERIES --- //
@@ -42,14 +46,18 @@ export const useDashboardExtendedData = () => {
   return useQuery({
     queryKey: ['dashboard_extended_data'],
     queryFn: async () => {
-      const [health, overdue, loans, apps, progress] = await Promise.all([
+      const [health, overdue, loans, apps, progress, today, auctions, cashFlow, overdueDetailed] = await Promise.all([
         getMonthlyCollectionHealth(),
         getOverdueContributions(),
         getActiveLoanHealth(),
         getPendingApplicationsCount(),
-        getChitProgress()
+        getChitProgress(),
+        getTodayCollection(),
+        getUpcomingAuctions(),
+        getCashFlowSummary(),
+        getOverdueMembersDetailed()
       ])
-      return { health, overdue, loans, apps, progress }
+      return { health, overdue, loans, apps, progress, today, auctions, cashFlow, overdueDetailed }
     },
     refetchInterval: 60000,
     staleTime: 1000 * 30,

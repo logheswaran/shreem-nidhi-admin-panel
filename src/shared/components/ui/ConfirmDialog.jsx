@@ -8,39 +8,41 @@ const ConfirmDialog = ({
   onConfirm,
   title,
   message,
-  confirmText = 'Confirm Action',
+  confirmText = 'Confirm',
   cancelText = 'Cancel',
-  intent = 'danger',
-  loading = false,
+  variant = 'danger',
+  isLoading = false,
 }) => {
+  const color = variant === 'danger' ? 'bg-red-50 text-red-500' : 'bg-brand-gold/5 text-brand-gold'
+  const Icon = variant === 'danger' ? AlertCircle : CheckCircle2
+
   return (
-    <Modal isOpen={isOpen} onClose={!loading ? onClose : () => {}} title="Action Required">
-      <div className="flex flex-col items-center justify-center p-6 text-center">
-        <div className={`w-20 h-20 rounded-full flex items-center justify-center mb-6 shadow-xl ${intent === 'danger' ? 'bg-red-50 text-red-500 border border-red-100' : 'bg-brand-gold/10 text-brand-gold border border-brand-gold/20'}`}>
-          <AlertCircle className="w-10 h-10" />
+    <Modal isOpen={isOpen} onClose={!isLoading ? onClose : () => {}} title="Security Confirmation" maxWidth="max-w-md">
+      <div className="p-8 text-center bg-white">
+        <div className={`w-16 h-16 mx-auto rounded-3xl ${color} flex items-center justify-center mb-6 shadow-lg shadow-black/5`}>
+           <Icon className="w-8 h-8" />
         </div>
-        
-        <h3 className="text-2xl font-headline font-bold text-brand-navy mb-4 tracking-tight">{title}</h3>
-        <p className="text-sm text-brand-text/60 font-body mb-10 leading-relaxed max-w-sm">
+        <h3 className="text-xl font-headline font-bold text-[#2B2620] mb-2 tracking-tight">{title}</h3>
+        <p className="text-[11px] text-brand-text/50 font-medium mb-8 leading-relaxed max-w-[280px]">
           {message}
         </p>
 
-        <div className="flex gap-4 w-full justify-center">
+        <div className="flex gap-3 w-full">
           <button
-            disabled={loading}
+            disabled={isLoading}
             onClick={onClose}
-            className="flex-1 py-4 px-6 rounded-full font-bold text-xs uppercase tracking-[0.2em] bg-surface-container text-brand-navy border border-brand-gold/10 hover:bg-brand-gold/10 transition-all focus:outline-none"
+            className="flex-1 py-3.5 rounded-xl font-black text-[9px] uppercase tracking-widest bg-brand-ivory text-[#2B2620]/40 border border-brand-gold/10 hover:bg-brand-gold/10 transition-all active:scale-95"
           >
             {cancelText}
           </button>
           <button
-            disabled={loading}
+            disabled={isLoading}
             onClick={onConfirm}
-            className={`flex-1 py-4 px-6 rounded-full font-bold text-xs uppercase tracking-[0.2em] text-white shadow-xl transition-all flex items-center justify-center gap-2 focus:outline-none ${intent === 'danger' ? 'bg-red-600 hover:bg-red-700 active:scale-95 shadow-red-500/30' : 'heritage-gradient hover:brightness-110 active:scale-95 shadow-brand-gold/30'}`}
+            className={`flex-1 py-3.5 rounded-xl font-black text-[9px] uppercase tracking-widest text-white shadow-md transition-all flex items-center justify-center gap-2 active:scale-95 ${variant === 'danger' ? 'bg-red-600 hover:bg-red-700' : 'heritage-gradient hover:brightness-110'}`}
           >
-            {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : (
+            {isLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : (
               <>
-                <CheckCircle2 className="w-4 h-4" />
+                <CheckCircle2 className="w-3.5 h-3.5" />
                 {confirmText}
               </>
             )}

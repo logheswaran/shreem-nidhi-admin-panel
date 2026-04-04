@@ -29,8 +29,8 @@ const ActionModal = ({ isOpen, onClose, mutateAction, isPending }) => {
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Administrative Command Center">
       <div className="space-y-6">
-        <div className="bg-brand-navy/5 p-4 rounded-[1.5rem] border border-brand-navy/10">
-          <p className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 mb-2 px-1">Target Identity</p>
+        <div className="bg-[#2B2620]/5 p-4 rounded-[1.5rem] border border-[#2B2620]/10">
+          <p className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/60 mb-2 px-1">Target Identity</p>
           <input 
             className="w-full bg-white border border-brand-gold/20 rounded-[1rem] p-3 text-sm font-body mb-3 focus:ring-0 focus:border-brand-gold transition-colors"
             placeholder="Chit Protocol UUID"
@@ -50,7 +50,7 @@ const ActionModal = ({ isOpen, onClose, mutateAction, isPending }) => {
            <button 
              onClick={() => handleAction('startMonth')}
              disabled={isPending}
-             className="bg-white border border-brand-gold/20 p-4 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 hover:bg-brand-gold/5 transition-all text-brand-navy disabled:opacity-50"
+             className="bg-white border border-brand-gold/20 p-4 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 hover:bg-brand-gold/5 transition-all text-[#2B2620] disabled:opacity-50"
            >
              <Play className="w-5 h-5 text-brand-gold" />
              <span className="text-[10px] font-black uppercase tracking-widest">Initialize Cycle</span>
@@ -59,7 +59,7 @@ const ActionModal = ({ isOpen, onClose, mutateAction, isPending }) => {
            <button 
              onClick={() => handleAction('winner')}
              disabled={isPending}
-             className="bg-white border border-brand-gold/20 p-4 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 hover:bg-green-50 transition-all text-brand-navy disabled:opacity-50"
+             className="bg-white border border-brand-gold/20 p-4 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 hover:bg-green-50 transition-all text-[#2B2620] disabled:opacity-50"
            >
              <Trophy className="w-5 h-5 text-green-600" />
              <span className="text-[10px] font-black uppercase tracking-widest text-center">Random Selection</span>
@@ -68,7 +68,7 @@ const ActionModal = ({ isOpen, onClose, mutateAction, isPending }) => {
            <button 
              onClick={() => handleAction('openAuction')}
              disabled={isPending}
-             className="bg-white border border-brand-gold/20 p-4 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 hover:bg-brand-gold/5 transition-all text-brand-navy disabled:opacity-50"
+             className="bg-white border border-brand-gold/20 p-4 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 hover:bg-brand-gold/5 transition-all text-[#2B2620] disabled:opacity-50"
            >
              <Gavel className="w-5 h-5 text-brand-gold" />
              <span className="text-[10px] font-black uppercase tracking-widest text-center">Open Auction</span>
@@ -77,7 +77,7 @@ const ActionModal = ({ isOpen, onClose, mutateAction, isPending }) => {
            <button 
              onClick={() => handleAction('closeAuction')}
              disabled={isPending}
-             className="bg-white border border-brand-gold/20 p-4 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 hover:bg-red-50 transition-all text-brand-navy disabled:opacity-50"
+             className="bg-white border border-brand-gold/20 p-4 rounded-[1.5rem] flex flex-col items-center justify-center gap-2 hover:bg-red-50 transition-all text-[#2B2620] disabled:opacity-50"
            >
              <CheckCircle2 className="w-5 h-5 text-red-600" />
              <span className="text-[10px] font-black uppercase tracking-widest text-center">Close / Settle</span>

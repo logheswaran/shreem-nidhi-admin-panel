@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { Loader2, User, IndianRupee, FileText, Calendar, Tag, CheckCircle2 } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import toast from 'react-hot-toast'
+import PremiumDropdown from '../../../shared/components/ui/PremiumDropdown'
 
 const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, members = [], loading = false }) => {
   const [formData, setFormData] = useState({
@@ -72,30 +73,21 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
       <form onSubmit={handleSubmit} className="space-y-6">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {/* Member Selection */}
-          <div className="space-y-2 md:col-span-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1">Account Identity</label>
-            <div className="relative group">
-              <User className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/30 group-focus-within:text-brand-gold transition-colors pointer-events-none" />
-              <select
-                name="user_id"
-                value={formData.user_id}
-                onChange={handleChange}
-                className="w-full bg-brand-ivory/50 border-2 border-brand-gold/5 focus:border-brand-gold/30 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-body focus:outline-none transition-all appearance-none cursor-pointer"
-                required
-              >
-                <option value="">Select Member...</option>
-                {members.map(member => (
-                  <option key={member.id} value={member.user_id}>
-                    {member.profiles?.full_name} ({member.profiles?.phone_number})
-                  </option>
-                ))}
-              </select>
-            </div>
-          </div>
+          <PremiumDropdown 
+            label="Account Identity"
+            className="md:col-span-2"
+            placeholder="Select Member..."
+            value={formData.user_id}
+            onChange={(val) => setFormData(prev => ({ ...prev, user_id: val }))}
+            options={members.map(member => ({
+              value: member.user_id,
+              label: `${member.profiles?.full_name} (${member.profiles?.phone_number})`
+            }))}
+          />
 
           {/* Transaction Type */}
           <div className="space-y-2 md:col-span-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1">Transaction Nature</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/60 ml-1">Transaction Nature</label>
             <div className="flex gap-4">
               {[
                 { id: 'credit', label: 'Credit (Inflow)', color: 'text-green-600', bg: 'bg-green-50' },
@@ -107,7 +99,7 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
                   onClick={() => setFormData(prev => ({ ...prev, transaction_type: type.id }))}
                   className={`flex-1 py-3 px-4 rounded-2xl text-[10px] font-black uppercase tracking-widest transition-all border-2 ${
                     formData.transaction_type === type.id 
-                      ? `border-brand-navy ${type.bg} ${type.color} shadow-sm` 
+                      ? `border-[#2B2620] ${type.bg} ${type.color} shadow-sm` 
                       : 'bg-white border-brand-gold/5 text-brand-text/40 hover:border-brand-gold/20'
                   }`}
                 >
@@ -122,7 +114,7 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
 
           {/* Amount */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1">Capital Impact</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/60 ml-1">Capital Impact</label>
             <div className="relative group">
               <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-text/30 font-bold">₹</div>
               <input
@@ -133,7 +125,7 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
                 value={formData.amount}
                 onChange={handleChange}
                 placeholder="0.00"
-                className="w-full bg-brand-ivory/50 border-2 border-brand-gold/5 focus:border-brand-gold/30 rounded-2xl py-3.5 pl-10 pr-4 text-sm font-bold text-brand-navy focus:outline-none transition-all placeholder:text-brand-text/20"
+                className="w-full bg-brand-ivory/50 border-2 border-brand-gold/5 focus:border-brand-gold/30 rounded-2xl py-3.5 pl-10 pr-4 text-sm font-bold text-[#2B2620] focus:outline-none transition-all placeholder:text-brand-text/20"
                 required
               />
             </div>
@@ -141,7 +133,7 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
 
           {/* Date */}
           <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1">Protocol Date</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/60 ml-1">Protocol Date</label>
             <div className="relative group">
               <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/30 group-focus-within:text-brand-gold transition-colors" />
               <input
@@ -156,30 +148,25 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
           </div>
 
           {/* Reference Type */}
-          <div className="space-y-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1">Category Ref</label>
-            <div className="relative group">
-              <Tag className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/30 group-focus-within:text-brand-gold transition-colors" />
-              <select
-                name="reference_type"
-                value={formData.reference_type}
-                onChange={handleChange}
-                className="w-full bg-brand-ivory/50 border-2 border-brand-gold/5 focus:border-brand-gold/30 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-body focus:outline-none transition-all appearance-none cursor-pointer"
-              >
-                <option value="">General Entry</option>
-                <option value="contribution">Contribution</option>
-                <option value="loan_disbursement">Loan Disbursement</option>
-                <option value="loan_repayment">Loan Repayment</option>
-                <option value="maturity_payout">Maturity Payout</option>
-                <option value="auction_dividend">Auction Dividend</option>
-                <option value="admin_adjustment">Admin Adjustment</option>
-              </select>
-            </div>
-          </div>
+          <PremiumDropdown 
+            label="Category Ref"
+            placeholder="General Entry"
+            value={formData.reference_type}
+            onChange={(val) => setFormData(prev => ({ ...prev, reference_type: val }))}
+            options={[
+              { value: '', label: 'General Entry' },
+              { value: 'contribution', label: 'Contribution' },
+              { value: 'loan_disbursement', label: 'Loan Disbursement' },
+              { value: 'loan_repayment', label: 'Loan Repayment' },
+              { value: 'maturity_payout', label: 'Maturity Payout' },
+              { value: 'auction_dividend', label: 'Auction Dividend' },
+              { value: 'admin_adjustment', label: 'Admin Adjustment' }
+            ]}
+          />
           
           {/* Notes */}
           <div className="space-y-2 md:col-span-2">
-            <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1">Audit Notes</label>
+            <label className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/60 ml-1">Audit Notes</label>
             <div className="relative group">
               <FileText className="absolute left-4 top-4 w-4 h-4 text-brand-text/30 group-focus-within:text-brand-gold transition-colors" />
               <textarea
@@ -193,9 +180,9 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
             </div>
           </div>
 
-          {/* Payment Mode (Gap 4) */}
+          {/* Payment Mode */}
           <div className="space-y-4 md:col-span-2 pt-4 border-t border-brand-gold/5">
-             <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/60 ml-1 block">Institutional Payment Mode</label>
+             <label className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/60 ml-1 block">Institutional Payment Mode</label>
              <div className="flex flex-wrap gap-2">
                 {['Cash', 'UPI', 'Bank Transfer', 'Cheque'].map(mode => (
                   <button
@@ -204,8 +191,8 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
                     onClick={() => setFormData(prev => ({ ...prev, payment_mode: mode }))}
                     className={`px-6 py-2.5 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all ${
                       formData.payment_mode === mode 
-                        ? 'bg-brand-navy text-white shadow-lg' 
-                        : 'bg-white border border-brand-gold/10 text-brand-navy hover:bg-brand-gold/5'
+                        ? 'bg-[#2B2620] text-white shadow-lg' 
+                        : 'bg-white border border-brand-gold/10 text-[#2B2620] hover:bg-brand-gold/5'
                     }`}
                   >
                     {mode}
@@ -215,14 +202,14 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
 
              {formData.payment_mode !== 'Cash' && (
                 <div className="animate-in slide-in-from-top duration-300">
-                   <label className="text-[10px] font-black uppercase tracking-widest text-brand-navy/30 ml-1 block mb-2">
+                   <label className="text-[10px] font-black uppercase tracking-widest text-[#2B2620]/30 ml-1 block mb-2">
                      {formData.payment_mode === 'Cheque' ? 'Instrument Number' : 'Transaction / Reference ID'}
                    </label>
                    <input 
                      name="payment_ref"
                      value={formData.payment_ref}
                      onChange={handleChange}
-                     className="w-full bg-brand-ivory/30 border border-brand-gold/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-gold/30 font-bold text-brand-navy"
+                     className="w-full bg-brand-ivory/30 border border-brand-gold/10 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-brand-gold/30 font-bold text-[#2B2620]"
                      placeholder={`Enter ${formData.payment_mode} reference...`}
                    />
                 </div>
@@ -234,7 +221,7 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
           <button
             type="button"
             onClick={onClose}
-            className="flex-1 px-8 py-4 bg-brand-ivory text-brand-navy text-[10px] font-black uppercase tracking-widest rounded-2xl border border-brand-gold/10 hover:bg-brand-gold/5 transition-all"
+            className="flex-1 px-8 py-4 bg-brand-ivory text-[#2B2620] text-[10px] font-black uppercase tracking-widest rounded-2xl border border-brand-gold/10 hover:bg-brand-gold/5 transition-all"
           >
             Cancel
           </button>

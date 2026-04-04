@@ -1,6 +1,6 @@
 import React from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertCircle, ShieldCheck, CheckCircle2, LayoutGrid, ArrowRight } from 'lucide-react'
+import { AlertCircle, ShieldCheck, CheckCircle2, LayoutGrid, ArrowRight, PlusCircle } from 'lucide-react'
 
 // Layout wrapper for consistent card styling
 const DashboardCard = ({ children, className = "" }) => (
@@ -100,6 +100,12 @@ export const PendingAppsBadge = ({ count }) => {
 
 // D. Chit Progress Tracker
 export const ChitProgressTracker = ({ chits = [] }) => {
+  const navigate = useNavigate()
+
+  if (!chits || chits.length === 0) {
+    return null
+  }
+
   return (
     <DashboardCard>
       <div className="flex items-center gap-3 mb-6">
@@ -110,7 +116,7 @@ export const ChitProgressTracker = ({ chits = [] }) => {
         {chits.map((chit, idx) => {
           const progress = Math.round((chit.current_month / chit.duration_months) * 100)
           return (
-            <div key={idx} className="p-4 bg-[#F7F5F0] rounded-2xl border border-brand-gold/5 flex flex-col gap-3 transition-colors duration-300">
+            <div key={idx} className="p-4 bg-[var(--bg-inner)] rounded-2xl border border-brand-gold/5 flex flex-col gap-3 transition-colors duration-300">
               <div className="flex justify-between items-end">
                 <span className="text-[11px] font-bold text-[var(--text-primary)]">{chit.name}</span>
                 <span className="text-[9px] font-black uppercase text-[var(--text-secondary)] opacity-60">Month {chit.current_month}/{chit.duration_months}</span>

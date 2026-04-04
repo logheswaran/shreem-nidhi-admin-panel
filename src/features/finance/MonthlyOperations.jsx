@@ -40,7 +40,7 @@ const MonthlyOperations = () => {
             <Calendar className="w-5 h-5" />
           </div>
           <div>
-            <p className="font-headline font-bold text-brand-navy">{row.name}</p>
+            <p className="font-headline font-bold text-[#2B2620]">{row.name}</p>
             <p className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest">Cycle: Month {row.current_month}</p>
           </div>
         </div>
@@ -48,7 +48,7 @@ const MonthlyOperations = () => {
     },
     { 
       header: 'Monthly Entry', 
-      render: (row) => <span className="font-bold text-brand-navy">₹{Number(row.monthly_contribution).toLocaleString()}</span> 
+      render: (row) => <span className="font-bold text-[#2B2620]">₹{Number(row.monthly_contribution).toLocaleString()}</span> 
     },
     { 
       header: 'Selection Protocol', 
@@ -67,7 +67,7 @@ const MonthlyOperations = () => {
           {row.chit_type === 'random' && (
             <button 
               onClick={() => { setSelectedChit(row); setModalType('winner'); setIsModalOpen(true); }}
-              className="flex items-center gap-2 px-4 py-2 bg-brand-navy text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:bg-brand-navy-light transition-all shadow-sm"
+              className="flex items-center gap-2 px-4 py-2 bg-[#2B2620] text-white text-[10px] font-black uppercase tracking-widest rounded-full hover:brightness-110 transition-all shadow-sm"
             >
               <Trophy className="w-4 h-4 text-brand-gold" /> Select Winner
             </button>
@@ -80,7 +80,7 @@ const MonthlyOperations = () => {
   return (
     <div className="animate-in fade-in duration-700">
       <header className="mb-10">
-        <h2 className="text-4xl font-headline font-bold text-brand-navy">Monthly Operations</h2>
+        <h2 className="text-4xl font-headline font-bold text-[#2B2620]">Monthly Operations</h2>
         <p className="text-on-surface-variant font-body mt-2 opacity-70">Execute cycle increments and financial distribution rituals.</p>
       </header>
 
@@ -90,7 +90,7 @@ const MonthlyOperations = () => {
           <AlertCircle className="text-brand-gold w-6 h-6" />
         </div>
         <div>
-          <h4 className="font-headline font-bold text-brand-navy">Immutable Financial Protocol</h4>
+          <h4 className="font-headline font-bold text-[#2B2620]">Immutable Financial Protocol</h4>
           <p className="text-sm text-brand-text/60 mt-1">Actions taken here are recorded directly to the immutable ledger. Ensure month generation is performed only after verifying the previous cycle's adherence.</p>
         </div>
       </div>
