@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { 
   AlertTriangle, 
   Search, 
@@ -11,32 +12,15 @@ import {
   ArrowRightCircle,
   ShieldCheck
 } from 'lucide-react'
-import { financeService } from '../finance/api'
 import { notificationService } from '../notifications/api'
+import { useRiskAnalysis } from './hooks/useRiskAnalysis'
 import DataTable from '../../shared/components/ui/DataTable'
 import toast from 'react-hot-toast'
 
 const RiskPanel = () => {
-  const [defaulters, setDefaulters] = useState([])
-  const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
   const navigate = useNavigate()
-
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
-    try {
-      setLoading(true)
-      const data = await financeService.getDefaulters()
-      setDefaulters(data)
-    } catch (error) {
-      toast.error('Failed to load risk analysis')
-    } finally {
-      setLoading(false)
-    }
-  }
+  const { defaulters, isLoading: loading } = useRiskAnalysis()
 
   const getRiskLevel = (row) => {
     const totalDue = Number(row.total_overdue_amount) + Number(row.total_paid_amount || 0)
@@ -50,8 +34,8 @@ const RiskPanel = () => {
   const handleSendReminder = async (defaulter) => {
     try {
       toast.loading(`Dispatching recovery protocol to ${defaulter.full_name}...`, { id: 'rem' })
-      const userId = defaulter.installments[0]?.chit_members?.user_id
-      const chitId = defaulter.installments[0]?.chit_members?.chit_id
+      const userId = defaulter.user_id
+      const chitId = defaulter.chit_id
       
       await notificationService.sendReminder(userId, chitId, defaulter.total_overdue_amount)
       toast.success('Recovery signal sent!', { id: 'rem' })
@@ -64,8 +48,8 @@ const RiskPanel = () => {
     try {
       toast.loading('Initializing mass recovery dispatch...', { id: 'mass' })
       await Promise.all(defaulters.map(d => {
-        const userId = d.installments[0]?.chit_members?.user_id
-        const chitId = d.installments[0]?.chit_members?.chit_id
+        const userId = d.user_id
+        const chitId = d.chit_id
         return notificationService.sendReminder(userId, chitId, d.total_overdue_amount)
       }))
       toast.success(`Broadcasting complete: ${defaulters.length} accounts notified.`, { id: 'mass' })
@@ -75,8 +59,8 @@ const RiskPanel = () => {
   }
 
   const filteredData = defaulters.filter(d => 
-    d.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
-    d.mobile_number?.includes(searchTerm)
+    d.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) || 
+    d.profiles?.mobile_number?.includes(searchTerm)
   )
 
   const columns = [
@@ -85,18 +69,18 @@ const RiskPanel = () => {
       render: (row) => (
         <div className="flex items-center gap-4">
           <div className="w-10 h-10 rounded-2xl bg-brand-gold/5 flex items-center justify-center font-bold text-sm text-brand-gold border border-brand-gold/10">
-            {row.full_name?.[0]}
+            {row.profiles?.full_name?.[0]?.toUpperCase() || '?'}
           </div>
           <div className="flex flex-col">
-            <span className="font-headline font-bold text-[#2B2620]">{row.full_name}</span>
-            <span className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest">{row.mobile_number}</span>
+            <span className="font-headline font-bold text-[#2B2620]">{row.profiles?.full_name || 'Anonymous'}</span>
+            <span className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest">{row.profiles?.mobile_number || 'N/A'}</span>
           </div>
         </div>
       )
     },
     {
       header: 'Assigned Scheme',
-      render: (row) => <span className="font-bold text-[#2B2620]">{row.chit_name}</span>
+      render: (row) => <span className="font-bold text-[#2B2620]">{row.chits?.name || 'Unassigned'}</span>
     },
     {
       header: 'Lapsed Cycles',
@@ -141,14 +125,14 @@ const RiskPanel = () => {
             <Send className="w-5 h-5" />
           </button>
           <button 
-            onClick={() => navigate(`/members/${row.installments[0]?.chit_members?.user_id}`)}
+            onClick={() => navigate(`/members/${row.user_id}`)}
             className="p-2 text-[#2B2620] hover:bg-[#2B2620]/5 rounded-xl transition-all"
             title="Dossier Inspection"
           >
             <User className="w-5 h-5" />
           </button>
           <button 
-            onClick={() => navigate(`/finance/ledger?userId=${row.installments[0]?.chit_members?.user_id}`)}
+            onClick={() => navigate(`/finance/ledger?userId=${row.user_id}`)}
             className="p-2 text-green-600 hover:bg-green-50 rounded-xl transition-all"
             title="Audit Full Ledger"
           >

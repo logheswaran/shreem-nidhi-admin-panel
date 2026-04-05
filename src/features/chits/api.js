@@ -140,6 +140,25 @@ export const getChitFinancials = async (chitId) => {
   }
 }
 
+/**
+ * Normalizes database field names to frontend property names.
+ * Ensures compatibility between Supabase schema and Heritage components.
+ */
+const mapChit = (chit) => {
+  if (!chit) return null
+  return {
+    ...chit,
+    // Database (total_members) -> UI (max_members)
+    max_members: chit.total_members || chit.max_members || chit.members_limit,
+    // Database (monthly_amount) -> UI (monthly_contribution)
+    monthly_contribution: chit.monthly_amount || chit.monthly_contribution,
+    // Database (duration_months) -> UI (total_months)
+    total_months: chit.duration_months || chit.total_months,
+    // Ensure membership count is extracted from the join result
+    members_count: chit.members_count || chit.chit_members?.[0]?.count || 0
+  }
+}
+
 // --- READS --- //
 
 export const getChits = async () => {
@@ -168,10 +187,7 @@ export const getChits = async () => {
 
     // IF PRO MODE: Return exact DB state regardless of count
     if (proMode) {
-      return (data || []).map(chit => ({
-        ...chit,
-        members_count: chit.chit_members?.[0]?.count || 0
-      }))
+      return (data || []).map(mapChit)
     }
 
     // IF DB EMPTY & DEMO MODE: Return high-fidelity mocks
@@ -181,13 +197,7 @@ export const getChits = async () => {
     }
 
     // Normal mapped results
-    return (data || []).map(chit => ({
-      ...chit,
-      members_count: chit.chit_members?.[0]?.count || 0,
-      // Fix column inconsistency: some tables use duration_months, some total_months
-      total_months: chit.total_months || chit.duration_months, 
-      max_members: chit.max_members || chit.members_limit
-    }))
+    return (data || []).map(mapChit)
   } catch (error) {
     console.error('Supabase Critical Failure:', error)
     console.groupEnd()
@@ -212,11 +222,7 @@ export const getChitById = async (id) => {
   if (error) throw error
   
   // Normalize columns
-  return {
-    ...data,
-    total_months: data.total_months || data.duration_months,
-    max_members: data.max_members || data.members_limit
-  }
+  return mapChit(data)
 }
 
 /**

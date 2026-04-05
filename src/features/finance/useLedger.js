@@ -1,5 +1,5 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { useMemo } from 'react'
+import { useMemo, useEffect } from 'react'
 import { financeService } from './api'
 import toast from 'react-hot-toast'
 
@@ -9,13 +9,20 @@ import toast from 'react-hot-toast'
 export const useLedger = () => {
   const queryClient = useQueryClient()
 
-  // 1. DATA QUERY (WITH CACHING)
+  // 1. DATA QUERY (WITH NO CACHING FOR AUDIT INTEGRITY)
   const { data: ledger = [], isLoading: loading, error } = useQuery({
     queryKey: ['ledger'],
     queryFn: financeService.getLedger,
-    staleTime: 1000 * 60 * 5, // 5 minutes cache freshness
-    cacheTime: 1000 * 60 * 30, // 30 minutes in RAM
+    staleTime: 0, // Force fresh audit data
   })
+
+  // React Query v5 handle error (Breaking Change Fix)
+  useEffect(() => {
+    if (error) {
+       console.error('Audit: Database Communication Error', error)
+       toast.error('Financial Audit: System failed to retrieve ledger logs.')
+    }
+  }, [error])
 
   // 2. COMPUTED STATS (MEMOIZED)
   const stats = useMemo(() => {
@@ -54,6 +61,7 @@ export const useLedger = () => {
     mutationFn: ({ payload, metadata }) => financeService.createLedgerEntry(payload, metadata),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ledger'] })
+      queryClient.invalidateQueries({ queryKey: ['defaulters'] })
       toast.success('Ledger entry recorded')
     },
     onError: (err) => {
@@ -66,6 +74,7 @@ export const useLedger = () => {
     mutationFn: ({ id, updates }) => financeService.updateLedgerEntry(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ledger'] })
+      queryClient.invalidateQueries({ queryKey: ['defaulters'] })
       toast.success('Ledger entry updated')
     },
     onError: (err) => {
@@ -78,6 +87,7 @@ export const useLedger = () => {
     mutationFn: financeService.deleteLedgerEntry,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['ledger'] })
+      queryClient.invalidateQueries({ queryKey: ['defaulters'] })
       toast.success('Entry removed from ledger')
     },
     onError: (err) => {

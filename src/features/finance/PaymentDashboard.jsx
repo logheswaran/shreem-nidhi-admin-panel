@@ -48,32 +48,14 @@ const PaymentDashboard = () => {
         financeService.getCollectionSummaries(),
         financeService.getChitCollectionProgress()
       ])
+      
       setSummary(sum)
       
-      // Enhance chit progress with member counts
-      const enhancedProgress = await Promise.all(prog.map(async (chit) => {
-        try {
-          const { data: contributions } = await supabase
-            .from('contributions')
-            .select('payment_status, due_date')
-            .eq('chit_id', chit.id)
-          
-          const today = new Date().toISOString().split('T')[0]
-          const membersPaid = contributions?.filter(c => c.payment_status === 'paid').length || 0
-          const membersPending = contributions?.filter(c => c.payment_status === 'pending' && c.due_date >= today).length || 0
-          const membersOverdue = contributions?.filter(c => c.payment_status === 'pending' && c.due_date < today).length || 0
-          
-          return {
-            ...chit,
-            membersPaid,
-            membersPending,
-            membersOverdue,
-            totalMembers: membersPaid + membersPending + membersOverdue
-          }
-        } catch {
-          return { ...chit, membersPaid: 0, membersPending: 0, membersOverdue: 0, totalMembers: 0 }
-        }
-      }))
+      let enhancedProgress = []
+      
+      if (prog && prog.length > 0) {
+        enhancedProgress = prog;
+      }
       
       setChitProgress(enhancedProgress)
     } catch (error) {
@@ -250,15 +232,17 @@ const PaymentDashboard = () => {
   )
 
   // --- PROGRESS BAR COLOR LOGIC ---
-  const getProgressColor = (percentage) => {
-    if (percentage >= 80) return 'bg-green-500'
-    if (percentage >= 50) return 'bg-amber-500'
+  const getProgressColor = (chit) => {
+    if (!chit.totalDue || chit.totalDue === 0) return 'bg-brand-gold/40' // Pre-cycle
+    if (chit.percentage >= 80) return 'bg-green-500'
+    if (chit.percentage >= 50) return 'bg-amber-500'
     return 'bg-red-500'
   }
 
-  const getStatusLabel = (percentage) => {
-    if (percentage >= 80) return { label: 'Healthy', class: 'bg-green-100 text-green-700' }
-    if (percentage >= 50) return { label: 'At Risk', class: 'bg-amber-100 text-amber-700' }
+  const getStatusLabel = (chit) => {
+    if (!chit.totalDue || chit.totalDue === 0) return { label: 'Pre-Cycle', class: 'bg-brand-gold/10 text-brand-gold font-bold' }
+    if (chit.percentage >= 80) return { label: 'Healthy', class: 'bg-green-100 text-green-700' }
+    if (chit.percentage >= 50) return { label: 'At Risk', class: 'bg-amber-100 text-amber-700' }
     return { label: 'Critical', class: 'bg-red-100 text-red-700' }
   }
 
@@ -363,7 +347,7 @@ const PaymentDashboard = () => {
                   </td>
                 </tr>
               ) : filteredProgress.map((chit) => {
-                const status = getStatusLabel(chit.percentage)
+                const status = getStatusLabel(chit)
                 return (
                   <tr 
                     key={chit.id} 
@@ -385,7 +369,7 @@ const PaymentDashboard = () => {
                         </div>
                         <div className="w-full h-2 bg-brand-gold/5 rounded-full overflow-hidden border border-brand-gold/5">
                           <div 
-                            className={`h-full transition-all duration-1000 ${getProgressColor(chit.percentage || 0)}`}
+                            className={`h-full transition-all duration-1000 ${getProgressColor(chit)}`}
                             style={{ width: `${Math.min(chit.percentage || 0, 100)}%` }}
                           />
                         </div>

@@ -1,4 +1,4 @@
-import { Phone, Mail, LayoutGrid, Calendar, ArrowUpRight, User, Wallet, AlertCircle } from 'lucide-react'
+import { Phone, Mail, LayoutGrid, Calendar, ArrowUpRight, User, Wallet, AlertCircle, Briefcase } from 'lucide-react'
 import Modal from '../../../shared/components/ui/Modal'
 import StatusBadge from '../../../shared/components/ui/StatusBadge'
 import RiskBadge from '../../../shared/components/ui/RiskBadge'

@@ -98,9 +98,14 @@ export const useChitActions = () => {
       }
     },
     onSuccess: (_, variables) => {
+      const chitId = variables.payload?.chitId
       // Invalidate both listing and specific detail caches
       queryClient.invalidateQueries({ queryKey: ['chits'] })
-      queryClient.invalidateQueries({ queryKey: ['chit'] }) 
+      if (chitId) {
+        queryClient.invalidateQueries({ queryKey: ['chit', chitId] })
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['chit'] })
+      }
       queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] })
 
       const msgs = {

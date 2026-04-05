@@ -130,7 +130,7 @@ const MemberFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loadin
             onChange={(val) => setFormData(prev => ({ ...prev, chit_id: val }))}
             options={chits.map(chit => ({
               value: chit.id,
-              label: `${chit.name} (₹${Number(chit.amount).toLocaleString()})`
+              label: `${chit.name} (₹${Number(chit.monthly_contribution || 0).toLocaleString()})`
             }))}
           />
 

@@ -19,6 +19,8 @@ import {
   X
 } from 'lucide-react'
 import { useMembers } from './useMembers'
+import { useRiskAnalysis } from '../risk/hooks/useRiskAnalysis'
+import { useChits } from '../chits/hooks'
 import { useDebounce } from '../../shared/hooks/useDebounce'
 import { useAuth } from '../../core/providers/AuthProvider'
 import DataTable from '../../shared/components/ui/DataTable'
@@ -34,7 +36,9 @@ import toast from 'react-hot-toast'
 const Members = () => {
   const navigate = useNavigate()
   const { isAdmin } = useAuth()
-  const { members, loading, stats, statsLoading, addMember, editMember, removeMember, syncDefaulters } = useMembers()
+  const { loading: memberLoading, stats, statsLoading, addMember, editMember, removeMember } = useMembers()
+  const { all: members, isLoading: riskLoading } = useRiskAnalysis()
+  const loading = memberLoading || riskLoading
   const searchRef = useRef(null)
 
   // UI State
@@ -50,23 +54,20 @@ const Members = () => {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
   const [deleteTargetId, setDeleteTargetId] = useState(null)
   const [showAlerts, setShowAlerts] = useState(true)
+  const [selectedChitId, setSelectedChitId] = useState('all')
+
+  const { data: chits = [], isLoading: chitsLoading } = useChits('all')
 
   const debouncedSearch = useDebounce(searchTerm, 300)
 
-  // Auto-Sync Defaulters
-  useEffect(() => {
-    if (members.length > 0) {
-      syncDefaulters()
-    }
-  }, [members.length])
 
-  // DYNAMIC TAB GENERATION
+
+  // DYNAMIC TAB GENERATION (Updated to use actual Chits)
   const dynamicTabs = useMemo(() => {
-    const chitNames = members
-      .map(m => m.chits?.name)
-      .filter(name => name && name !== 'Unassigned')
-    return ['All members', ...new Set(chitNames)]
-  }, [members])
+    const defaultTabs = ['All members']
+    const chitTabs = chits.map(chit => chit.name)
+    return [...defaultTabs, ...chitTabs]
+  }, [chits])
 
   // Filter & Sort Logic
   const processedMembers = useMemo(() => {
@@ -83,10 +84,14 @@ const Members = () => {
       )
     }
 
-    // Tab Filter (by Chit Name)
-    if (activeTab !== 'All members') {
-      result = result.filter(m => m.chits?.name === activeTab)
-    }
+    // Chit Selection Filter (Primary: ID)
+    if (selectedChitId !== 'all') {
+      result = result.filter(m => String(m.chit_id) === String(selectedChitId))
+    } 
+    // Fallback name-based filter (Only if ID match impossible) - DEPRECATED in favor of ID stability
+    // else if (activeTab !== 'All members') {
+    //   result = result.filter(m => m.chits?.name === activeTab)
+    // }
 
     // Status Filter
     if (statusFilter !== 'all') {
@@ -102,11 +107,7 @@ const Members = () => {
     result.sort((a, b) => {
       if (sortBy === 'name') return (a.profiles?.full_name || '').localeCompare(b.profiles?.full_name || '')
       if (sortBy === 'contribution') return (b.total_contribution || 0) - (a.total_contribution || 0)
-      if (sortBy === 'overdue') {
-        const aPending = (a.chits?.monthly_amount || 0) * (Math.floor((Date.now() - new Date(a.joined_at).getTime()) / (1000 * 60 * 60 * 24 * 30))) - (a.total_contribution || 0)
-        const bPending = (b.chits?.monthly_amount || 0) * (Math.floor((Date.now() - new Date(b.joined_at).getTime()) / (1000 * 60 * 60 * 24 * 30))) - (b.total_contribution || 0)
-        return bPending - aPending
-      }
+      if (sortBy === 'overdue') return (b.risk?.pending || 0) - (a.risk?.pending || 0)
       if (sortBy === 'newest') return new Date(b.joined_at) - new Date(a.joined_at)
       return 0
     })
@@ -116,24 +117,24 @@ const Members = () => {
 
   // TABULAR STATS CALCULATION (Dynamic based on Tab)
   const currentStats = useMemo(() => {
-    // Determine which members to evaluate (Tab-specific)
-    const tabFiltered = activeTab === 'All members' 
-      ? members 
-      : members.filter(m => m.chits?.name === activeTab)
+    // Determine which members to evaluate (ID-based Selection)
+    const filtered = selectedChitId !== 'all'
+      ? members.filter(m => String(m.chit_id) === String(selectedChitId))
+      : members
 
-    const total = tabFiltered.length
-    const active = tabFiltered.filter(m => m.status === 'active').length
-    const defaulters = tabFiltered.filter(m => m.status === 'defaulter' || m.risk?.level === 'HIGH').length
+    const total = filtered.length
+    const active = filtered.filter(m => m.status === 'active').length
+    const defaulters = filtered.filter(m => m.status === 'defaulter' || m.risk?.level === 'HIGH').length
     
     // Portfolio: Total successfully contributed amount by these members
-    const portfolioValue = tabFiltered.reduce((acc, m) => acc + (m.total_contribution || 0), 0)
+    const portfolioValue = filtered.reduce((acc, m) => acc + (m.total_contribution || 0), 0)
     
     // Monthly Flow: Target revenue from active members in this tab
-    const monthlyCollected = tabFiltered
+    const monthlyCollected = filtered
       .reduce((acc, m) => acc + (m.chits?.monthly_amount || 0), 0)
 
     return { total, active, defaulters, portfolioValue, monthlyCollected }
-  }, [members, activeTab])
+  }, [members, activeTab, selectedChitId])
   const columns = useMemo(() => {
     return [
       {
@@ -157,9 +158,7 @@ const Members = () => {
       {
         header: 'Financial Health',
         render: (row) => {
-          const monthsElapsed = Math.floor((Date.now() - new Date(row.joined_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
-          const expected = (row.chits?.monthly_amount || 0) * monthsElapsed
-          const pending = Math.max(0, expected - (row.total_contribution || 0))
+          const pending = row.risk?.pending || 0
           
           return (
             <div>
@@ -242,9 +241,7 @@ const Members = () => {
     ]
     
     const data = processedMembers.map(m => {
-      const monthsElapsed = Math.floor((Date.now() - new Date(m.joined_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
-      const expected = (m.chits?.monthly_amount || 0) * monthsElapsed
-      const pending = Math.max(0, expected - (m.total_contribution || 0))
+      const pending = m.risk?.pending || 0
       
       return {
         ...m,
@@ -313,9 +310,7 @@ const Members = () => {
                 .filter(m => m.risk.level === 'HIGH')
                 .slice(0, 5)
                 .map((m, idx) => {
-                   const monthsElapsed = Math.floor((Date.now() - new Date(m.joined_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
-                   const expected = (m.chits?.monthly_amount || 0) * monthsElapsed
-                   const pending = Math.max(0, expected - (m.total_contribution || 0))
+                   const pending = m.risk?.pending || 0
                    
                    return (
                      <div key={idx} className="bg-white/60 p-4 rounded-2xl border border-red-100 hover:shadow-md transition-all group">
@@ -335,7 +330,103 @@ const Members = () => {
         </div>
       )}
 
-      {/* 2. KPI Summary Cards */}
+      {/* 1. Investment Plans Selection (NEW) */}
+      <section className="mb-12">
+        <div className="flex justify-between items-center mb-6">
+          <div>
+            <h3 className="text-xl font-headline font-bold text-[#2B2620]">Strategic Investment Plans</h3>
+            <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/40 mt-1">Select a plan to visualize associated member portfolios</p>
+          </div>
+          <button 
+            onClick={() => { setSelectedChitId('all'); setActiveTab('All members'); }}
+            className={`px-4 py-2 text-[9px] font-black uppercase tracking-widest rounded-lg transition-all ${
+              selectedChitId === 'all' 
+                ? 'bg-brand-gold text-white shadow-lg shadow-brand-gold/20' 
+                : 'bg-white text-brand-text/60 border border-brand-gold/10 hover:bg-brand-gold/5'
+            }`}
+          >
+            Reset Selection
+          </button>
+        </div>
+
+        <div className="flex gap-6 overflow-x-auto pb-6 no-scrollbar -mx-4 px-4 snap-x">
+          {/* All Members Card */}
+          <div 
+            onClick={() => { setSelectedChitId('all'); setActiveTab('All members'); }}
+            className={`min-w-[200px] p-6 rounded-[2rem] border-2 transition-all cursor-pointer snap-start flex flex-col justify-between ${
+              selectedChitId === 'all' 
+                ? 'bg-brand-gold border-brand-gold shadow-xl shadow-brand-gold/20 scale-105' 
+                : 'bg-white border-brand-gold/10 hover:border-brand-gold/30'
+            }`}
+          >
+            <div className={`p-3 rounded-2xl w-fit mb-4 ${selectedChitId === 'all' ? 'bg-white/20' : 'bg-brand-gold/10'}`}>
+              <UsersIcon className={`w-5 h-5 ${selectedChitId === 'all' ? 'text-white' : 'text-brand-gold'}`} />
+            </div>
+            <div>
+              <p className={`text-[9px] font-black uppercase tracking-widest mb-1 ${selectedChitId === 'all' ? 'text-white/60' : 'text-brand-text/40'}`}>Registry Overview</p>
+              <p className={`text-lg font-headline font-bold ${selectedChitId === 'all' ? 'text-white' : 'text-[#2B2620]'}`}>Global Directory</p>
+            </div>
+          </div>
+
+          {/* Individual Chit Cards */}
+          {chits.map((chit) => (
+            <div 
+              key={chit.id}
+              onClick={() => { 
+                setSelectedChitId(chit.id); 
+                setActiveTab(chit.name);
+              }}
+              className={`min-w-[280px] p-6 rounded-[2rem] border-2 transition-all cursor-pointer snap-start flex flex-col justify-between relative overflow-hidden group ${
+                selectedChitId === chit.id 
+                  ? 'bg-white border-brand-gold shadow-xl shadow-brand-gold/10 scale-105' 
+                  : 'bg-white border-brand-gold/5 hover:border-brand-gold/20'
+              }`}
+            >
+              {selectedChitId === chit.id && (
+                <div className="absolute top-0 right-0 w-20 h-20 bg-brand-gold/5 rounded-bl-[4rem] flex items-center justify-center pl-4 pb-4">
+                  <ShieldCheck className="w-6 h-6 text-brand-gold" />
+                </div>
+              )}
+              
+              <div className="relative z-10">
+                <div className="flex gap-2 mb-4">
+                  <span className={`text-[8px] font-black uppercase tracking-widest px-2 py-1 rounded-lg ${
+                    chit.chit_type === 'random' ? 'bg-emerald-50 text-emerald-700' : 'bg-brand-gold/10 text-brand-gold'
+                  }`}>
+                    {chit.chit_type}
+                  </span>
+                  <StatusBadge status={chit.status} size="sm" />
+                </div>
+                
+                <h4 className="text-xl font-headline font-bold text-[#2B2620] mb-2 group-hover:text-brand-gold transition-colors">{chit.name}</h4>
+                <div className="flex items-center gap-4 text-brand-text/50">
+                  <div className="flex items-center gap-1">
+                    <UsersIcon className="w-3 h-3" />
+                    <span className="text-[10px] font-bold">{chit.members_count || 0}/{chit.max_members || chit.total_members || 0}</span>
+                  </div>
+                  <div className="flex items-center gap-1">
+                    <Wallet className="w-3 h-3" />
+                    <span className="text-[10px] font-bold">₹{(chit.monthly_amount || 0).toLocaleString()}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="mt-6 pt-4 border-t border-brand-gold/5 flex justify-between items-center">
+                 <p className="text-[9px] font-black uppercase tracking-widest text-brand-text/30">Select Protocol</p>
+                 <ArrowUpDown className={`w-4 h-4 transition-transform ${selectedChitId === chit.id ? 'rotate-180 text-brand-gold' : 'text-brand-text/20 group-hover:text-brand-gold/50'}`} />
+              </div>
+            </div>
+          ))}
+
+          {chitsLoading && [1,2,3].map(i => (
+            <div key={i} className="min-w-[280px] h-[180px] bg-white border border-brand-gold/5 rounded-[2rem] animate-pulse p-6">
+              <div className="w-1/2 h-4 bg-gray-100 rounded mb-4" />
+              <div className="w-3/4 h-8 bg-gray-100 rounded mb-6" />
+              <div className="w-full h-12 bg-gray-100 rounded" />
+            </div>
+          ))}
+        </div>
+      </section>
       {/* 📊 KPI Summary Cards: Dashboard Parity Pass */}
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-10">
         <div className="bg-white p-6 rounded-[2rem] border border-brand-gold/10 shadow-sm transition-all hover:shadow-md flex items-center gap-4">
@@ -449,25 +540,35 @@ const Members = () => {
       <div className="bg-white border-[0.5px] border-brand-gold/20 rounded-[2rem] shadow-xl overflow-hidden flex flex-col">
         {/* TAB BAR */}
         <div className="px-8 flex border-b border-brand-gold/10 overflow-x-auto no-scrollbar bg-gray-50/10">
-          {dynamicTabs.map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`px-6 py-6 text-[11px] font-black uppercase tracking-widest transition-all relative whitespace-nowrap flex items-center gap-3 ${
-                activeTab === tab 
-                  ? 'text-brand-gold translate-y-[1px]' 
-                  : 'text-brand-text/30 hover:text-[#2B2620]'
-              }`}
-            >
-              {tab}
-              <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
-                activeTab === tab ? 'bg-brand-gold/10 text-brand-goldDark' : 'bg-gray-100 text-gray-400'
-              }`}>
-                {tab === 'All members' ? members.length : members.filter(m => m.chits?.name === tab).length}
-              </span>
-              {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-[3px] bg-brand-gold rounded-t-full shadow-[0_-2px_10px_rgba(186,117,23,0.3)]"></div>}
-            </button>
-          ))}
+          {dynamicTabs.map((tab) => {
+            const relatedChitId = chits.find(c => c.name === tab)?.id
+            return (
+              <button
+                key={tab}
+                onClick={() => {
+                  setActiveTab(tab)
+                  if (tab === 'All members') {
+                    setSelectedChitId('all')
+                  } else if (relatedChitId) {
+                    setSelectedChitId(relatedChitId)
+                  }
+                }}
+                className={`px-6 py-6 text-[11px] font-black uppercase tracking-widest transition-all relative whitespace-nowrap flex items-center gap-3 ${
+                  activeTab === tab 
+                    ? 'text-brand-gold translate-y-[1px]' 
+                    : 'text-brand-text/30 hover:text-[#2B2620]'
+                }`}
+              >
+                {tab}
+                <span className={`px-2 py-0.5 rounded-full text-[9px] font-bold ${
+                  activeTab === tab ? 'bg-brand-gold/10 text-brand-goldDark' : 'bg-gray-100 text-gray-400'
+                }`}>
+                  {tab === 'All members' ? members.length : members.filter(m => (m.chits?.name === tab || (relatedChitId && m.chit_id === relatedChitId))).length}
+                </span>
+                {activeTab === tab && <div className="absolute bottom-0 left-0 w-full h-[3px] bg-brand-gold rounded-t-full shadow-[0_-2px_10px_rgba(186,117,23,0.3)]"></div>}
+              </button>
+            )
+          })}
         </div>
 
         {/* TABLE SECTION */}
