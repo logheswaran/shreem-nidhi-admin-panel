@@ -4,67 +4,67 @@ const MOCK_MEMBERS = [
   {
     id: 'mock-1',
     user_id: 'u1',
-    chit_id: 'c1',
+    chit_id: 'C001',
     status: 'active',
     total_contribution: 4000,
     months_paid: 4,
     profiles: { full_name: 'Rajesh Sharma', mobile_number: '+919876543210', email: 'rajesh@sreemnidhi.com' },
-    chits: { name: 'ShreemNidhi Special 250' },
+    chits: { name: 'SreeNidhi 250 (Pioneer)', monthly_amount: 25000 },
     joined_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30 * 4).toISOString()
   },
   {
     id: 'mock-2',
     user_id: 'u2',
-    chit_id: 'c2',
+    chit_id: 'C002',
     status: 'active',
     total_contribution: 8000,
     months_paid: 4,
     profiles: { full_name: 'Priya Iyer', mobile_number: '+919876543211', email: 'priya@sreemnidhi.com' },
-    chits: { name: 'Svarnam' },
+    chits: { name: 'Golden Harvest (Auction)', monthly_amount: 10000 },
     joined_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30 * 4).toISOString()
   },
   {
     id: 'mock-3',
     user_id: 'u3',
-    chit_id: 'c1',
+    chit_id: 'C001',
     status: 'active',
     total_contribution: 4000,
     months_paid: 4,
     profiles: { full_name: 'Amit Varma', mobile_number: '+919876543212', email: 'amit@sreemnidhi.com' },
-    chits: { name: 'ShreemNidhi Special 250' },
+    chits: { name: 'SreeNidhi 250 (Pioneer)', monthly_amount: 25000 },
     joined_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30 * 4).toISOString()
   },
   {
     id: 'mock-4',
     user_id: 'u4',
-    chit_id: 'c2',
+    chit_id: 'C002',
     status: 'active',
     total_contribution: 8000,
     months_paid: 4,
     profiles: { full_name: 'Sneha Reddy', mobile_number: '+919876543213', email: 'sneha@sreemnidhi.com' },
-    chits: { name: 'Svarnam' },
+    chits: { name: 'Golden Harvest (Auction)', monthly_amount: 10000 },
     joined_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30 * 4).toISOString()
   },
   {
     id: 'mock-5',
     user_id: 'u5',
-    chit_id: 'c1',
+    chit_id: 'C001',
     status: 'active',
     total_contribution: 4000,
     months_paid: 4,
     profiles: { full_name: 'Vikram Singh', mobile_number: '+919876543214', email: 'vikram@sreemnidhi.com' },
-    chits: { name: 'ShreemNidhi Special 250' },
+    chits: { name: 'SreeNidhi 250 (Pioneer)', monthly_amount: 25000 },
     joined_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30 * 4).toISOString()
   },
   {
     id: 'mock-6',
     user_id: 'u6',
-    chit_id: 'c1',
+    chit_id: 'C003',
     status: 'active',
     total_contribution: 1000,
     months_paid: 1,
     profiles: { full_name: 'Admin Member', mobile_number: '+919025169190', email: 'admin@sreemnidhi.com' },
-    chits: { name: 'ShreemNidhi Special 250' },
+    chits: { name: 'Shreem Nidhi Special (Random)', monthly_amount: 50000 },
     joined_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString()
   }
 ]
@@ -73,7 +73,7 @@ const MOCK_APPLICATIONS = [
   {
     id: "APP-001",
     user_id: "u101",
-    chit_id: "c1",
+    chit_id: "C001",
     status: "pending",
     kyc_status: "verified",
     applied_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
@@ -85,9 +85,9 @@ const MOCK_APPLICATIONS = [
       address: "No. 12, Gandhi St, Chennai"
     },
     chits: { 
-      name: "ShreemNidhi Special 250", 
-      monthly_amount: 5000,
-      total_value: 250000
+      name: "SreeNidhi 250 (Pioneer)", 
+      monthly_amount: 25000,
+      total_value: 5000000
     },
     risk: { level: "LOW", reason: "Income significantly higher than monthly commitment." },
     documents: [
@@ -101,7 +101,7 @@ const MOCK_APPLICATIONS = [
   {
     id: "APP-002",
     user_id: "u102",
-    chit_id: "c2",
+    chit_id: "C002",
     status: "pending",
     kyc_status: "pending",
     applied_at: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
@@ -113,7 +113,7 @@ const MOCK_APPLICATIONS = [
       address: "Flat 4B, Heritage Apts, Madurai"
     },
     chits: { 
-      name: "Svarnam", 
+      name: "Golden Harvest (Auction)", 
       monthly_amount: 10000,
       total_value: 500000
     },
@@ -125,47 +125,6 @@ const MOCK_APPLICATIONS = [
     audit_log: [
       { action: "Submission", user: "Meena Kumari", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString() }
     ]
-  },
-  {
-    id: "APP-003",
-    user_id: "u103",
-    chit_id: "c1",
-    status: "approved",
-    kyc_status: "verified",
-    applied_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
-    reviewed_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 9).toISOString(),
-    reviewed_by_name: "Admin Loghes",
-    monthly_income: 60000,
-    profiles: { full_name: "Suresh Prabhu", mobile_number: "+91 90031 99887" },
-    chits: { name: "ShreemNidhi Special 250", monthly_amount: 5000 },
-    risk: { level: "LOW", reason: "Excellent financial buffer." }
-  },
-  {
-    id: "APP-004",
-    user_id: "u104",
-    chit_id: "c2",
-    status: "rejected",
-    kyc_status: "failed",
-    rejection_reason: "KYC documents were blurry and unverifiable after 2 attempts.",
-    applied_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 5).toISOString(),
-    reviewed_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 4).toISOString(),
-    reviewed_by_name: "Admin Loghes",
-    monthly_income: 30000,
-    profiles: { full_name: "Anita Bose", mobile_number: "+91 97788 11223" },
-    chits: { name: "Svarnam", monthly_amount: 10000 },
-    risk: { level: "MEDIUM", reason: "Income borderline for commitment." }
-  },
-  {
-    id: "APP-005",
-    user_id: "u105",
-    chit_id: "c1",
-    status: "pending",
-    kyc_status: "verified",
-    applied_at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-    monthly_income: 55000,
-    profiles: { full_name: "Vimal Kumar", mobile_number: "+91 91234 56789" },
-    chits: { name: "ShreemNidhi Special 250", monthly_amount: 5000 },
-    risk: { level: "LOW", reason: "Stable income, low commitment." }
   }
 ]
 
@@ -174,32 +133,31 @@ export const memberService = {
    * Fetch all members
    */
   async getMembers() {
-    const isDemo = typeof window !== 'undefined' && localStorage.getItem('sreem_nidhi_demo') === 'true'
-    const isPro = typeof window !== 'undefined' && localStorage.getItem('sreem_nidhi_pro_mode') === 'true'
-
     try {
       const { data, error } = await supabase
         .from('chit_members')
-        .select('*, profiles(*), chits(*)')
-      if (error) throw error
-      
-      // PRO MODE: Disable mocks, show exactly what's in the DB
-      if (isPro) return data || []
+        .select(`
+          id,
+          chit_id,
+          user_id,
+          status,
+          total_contribution,
+          months_paid,
+          joined_at,
+          profiles:user_id(id, full_name, mobile_number),
+          chits:chit_id(id, name, monthly_amount)
+        `)
 
-      if ((!data || data.length === 0) && isDemo) {
-        return MOCK_MEMBERS
+      if (error) {
+        console.error('📡 SUPABASE ERROR (getMembers):', error)
+        throw error
       }
-      
+
+      console.log('✅ JOINED DATA (Members):', data)
       return data || []
     } catch (e) {
-      if (isPro) {
-        // In pro mode, we want to see the real error to debug Supabase
-        console.error('PRO_MODE SUPABASE ERROR:', e)
-        return []
-      }
-      if (isDemo) return MOCK_MEMBERS
-      console.warn('Supabase Error: Returning empty member set');
-      return []
+      console.error('❌ Critical Fetch Failure:', e)
+      throw e
     }
   },
 
@@ -230,21 +188,22 @@ export const memberService = {
    * Fetch pending member applications
    */
   async getApplications() {
-    const isDemo = typeof window !== 'undefined' && localStorage.getItem('sreem_nidhi_demo') === 'true'
     try {
       const { data, error } = await supabase
         .from('member_applications')
-        .select('*, profiles(*), chits(*)')
+        .select('*, profiles:user_id(*), chits:chit_id(*)')
         .order('applied_at', { ascending: false })
-      if (error) throw error
-
-      if ((!data || data.length === 0) && isDemo) {
-        return MOCK_APPLICATIONS
+      
+      if (error) {
+        console.error('📡 SUPABASE ERROR (getApplications):', error)
+        throw error
       }
+
+      console.log('✅ SUPABASE DATA (Applications):', data)
       return data || []
     } catch (e) {
-      if (isDemo) return MOCK_APPLICATIONS
-      return []
+      console.error('❌ Critical Applications Fetch Failure:', e)
+      throw e
     }
   },
 
@@ -320,7 +279,7 @@ export const memberService = {
       .from('chit_members')
       .update(updates)
       .eq('id', id)
-      .select('*, profiles(*), chits(*)')
+      .select('*, profiles:user_id(*), chits:chit_id(*)')
       .single()
     if (error) throw error
     return data
@@ -344,7 +303,7 @@ export const memberService = {
     const { data, error } = await supabase
       .from('chit_members')
       .insert([payload])
-      .select('*, profiles(*), chits(*)')
+      .select('*, profiles:user_id(*), chits:chit_id(*)')
       .single()
     if (error) throw error
     return data
@@ -356,7 +315,7 @@ export const memberService = {
   async getMemberById(id) {
     const { data, error } = await supabase
       .from('chit_members')
-      .select('*, profiles(*), chits(*)')
+      .select('*, profiles:user_id(*), chits:chit_id(*)')
       .eq('id', id)
       .single()
     if (error) throw error

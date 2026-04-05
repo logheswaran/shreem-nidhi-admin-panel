@@ -1,6 +1,6 @@
 import React from 'react'
 
-const StatusBadge = ({ status }) => {
+const StatusBadge = ({ status, size = 'md' }) => {
   const styles = {
     // Basic States: Refactored to Heritage Ivory
     pending: 'bg-brand-ivory text-[#2B2620]/60 border-brand-gold/10',
@@ -29,9 +29,10 @@ const StatusBadge = ({ status }) => {
 
   const normalizedStatus = status?.toLowerCase() || 'unknown'
   const displayLabel = status?.replace(/_/g, ' ') || 'Unknown'
+  const sizeStyles = size === 'sm' ? 'px-2 py-1 text-[7px]' : 'px-4 py-2 text-[9px]'
 
   return (
-    <span className={`px-4 py-2 rounded-full text-[9px] font-black uppercase tracking-[0.25em] transition-all duration-500 whitespace-nowrap shadow-sm border ${styles[normalizedStatus] || 'bg-brand-ivory text-[#2B2620]/40 border-brand-gold/10'}`}>
+    <span className={`${sizeStyles} rounded-full font-black uppercase tracking-[0.25em] transition-all duration-500 whitespace-nowrap shadow-sm border ${styles[normalizedStatus] || 'bg-brand-ivory text-[#2B2620]/40 border-brand-gold/10'}`}>
       {displayLabel}
     </span>
   )

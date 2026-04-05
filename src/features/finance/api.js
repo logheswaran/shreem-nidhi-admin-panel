@@ -1,68 +1,5 @@
 import { supabase } from '../../core/lib/supabase'
 
-const MOCK_LEDGER = [
-  {
-    id: 'l-mock-1',
-    user_id: 'u1',
-    transaction_type: 'credit',
-    reference_type: 'contribution',
-    amount: 4000,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString(),
-    profiles: { full_name: 'Rajesh Sharma' },
-    chits: { name: 'ShreemNidhi Special 250' }
-  },
-  {
-    id: 'l-mock-2',
-    user_id: 'u2',
-    transaction_type: 'credit',
-    reference_type: 'contribution',
-    amount: 8000,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString(),
-    profiles: { full_name: 'Priya Iyer' },
-    chits: { name: 'Svarnam' }
-  },
-  {
-    id: 'l-mock-3',
-    user_id: 'u3',
-    transaction_type: 'credit',
-    reference_type: 'contribution',
-    amount: 4000,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 48).toISOString(),
-    profiles: { full_name: 'Amit Varma' },
-    chits: { name: 'ShreemNidhi Special 250' }
-  },
-  {
-    id: 'l-mock-4',
-    user_id: 'u4',
-    transaction_type: 'credit',
-    reference_type: 'contribution',
-    amount: 8000,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 5).toISOString(),
-    profiles: { full_name: 'Sneha Reddy' },
-    chits: { name: 'Svarnam' }
-  },
-  {
-    id: 'l-mock-5',
-    user_id: 'u5',
-    transaction_type: 'credit',
-    reference_type: 'contribution',
-    amount: 4000,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-    profiles: { full_name: 'Vikram Singh' },
-    chits: { name: 'ShreemNidhi Special 250' }
-  },
-  {
-    id: 'l-mock-6',
-    user_id: 'u6',
-    transaction_type: 'credit',
-    reference_type: 'contribution',
-    amount: 1000,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 8).toISOString(),
-    profiles: { full_name: 'Admin Member' },
-    chits: { name: 'ShreemNidhi Special 250' }
-  }
-]
-
 export const financeService = {
   // READS
   async getContributions(chitId, month) {
@@ -95,9 +32,6 @@ export const financeService = {
   },
 
   async getLedger() {
-    const isDemo = typeof window !== 'undefined' && localStorage.getItem('sreem_nidhi_demo') === 'true'
-    const isPro = typeof window !== 'undefined' && localStorage.getItem('sreem_nidhi_pro_mode') === 'true'
-
     console.log('📡 Fetching all ledger records...')
     try {
       const { data, error } = await supabase
@@ -105,42 +39,38 @@ export const financeService = {
         .select('*, profiles(*), chits(*)')
         .order('created_at', { ascending: false })
       
-      if (error) throw error
-      
-      // PRO MODE: Show exact DB state
-      if (isPro) return data || []
-
-      if ((!data || data.length === 0) && isDemo) {
-        return MOCK_LEDGER
+      if (error) {
+        console.error('❌ Error fetching ledger:', error)
+        throw error
       }
       
       return data || []
     } catch (e) {
-      console.error('❌ Error fetching ledger:', e)
-      if (isPro) return []
-      if (isDemo) return MOCK_LEDGER
-      return []
+      console.error('❌ Ledger fetch failed:', e)
+      throw e
     }
   },
 
   async getMaturityPayouts() {
-    try {
-      const { data, error } = await supabase
-        .from('maturity_payouts')
-        .select('*, chit_members(*, profiles(*)), chits(*)')
-      if (error) throw error
-      return data || []
-    } catch { return [] }
+    const { data, error } = await supabase
+      .from('maturity_payouts')
+      .select('*, chit_members(*, profiles(*)), chits(*)')
+    if (error) {
+      console.error('❌ Error fetching payouts:', error)
+      throw error
+    }
+    return data || []
   },
 
   async getWinners() {
-    try {
-      const { data, error } = await supabase
-        .from('winners')
-        .select('*, chit_members(*, profiles(*)), chits(*)')
-      if (error) throw error
-      return data || []
-    } catch { return [] }
+    const { data, error } = await supabase
+      .from('winners')
+      .select('*, chit_members(*, profiles(*)), chits(*)')
+    if (error) {
+      console.error('❌ Error fetching winners:', error)
+      throw error
+    }
+    return data || []
   },
 
   async getCollectionSummaries() {
@@ -165,7 +95,7 @@ export const financeService = {
       }
 
       monthData.forEach(c => {
-        if (c.due_date >= firstDay && c.due_date <= lastDay) {
+        if (true) {
           summary.totalDueThisMonth += Number(c.amount_due)
           if (c.payment_status === 'paid') {
             summary.totalCollectedThisMonth += Number(c.amount_paid)
@@ -194,7 +124,7 @@ export const financeService = {
 
       const { data: contributions, error: contError } = await supabase
         .from('contributions')
-        .select('chit_id, amount_due, amount_paid, payment_status')
+        .select('chit_id, amount_due, amount_paid, payment_status, due_date, month_number')
       
       if (contError) throw contError
 
@@ -278,13 +208,19 @@ export const financeService = {
 
   // LEDGER DIRECT CRUD
   async createLedgerEntry(payload, metadata = null) {
+    console.log('📡 Attempting Ledger Insertion:', payload)
     const { data, error } = await supabase
       .from('ledger')
       .insert([payload])
       .select('*, profiles(*), chits(*)')
       .single()
     
-    if (error) throw error
+    if (error) {
+       console.error('❌ Insertion Failed:', error)
+       throw error
+    }
+
+    console.log('✅ Insertion Successful:', data)
 
     // Log payment metadata to audit logs if provided
     if (metadata && data) {
@@ -298,6 +234,35 @@ export const financeService = {
     return data
   },
 
+  async updateLedgerEntry(id, updates) {
+    console.log(`📡 Updating Ledger Entry ${id}:`, updates)
+    const { data, error } = await supabase
+      .from('ledger')
+      .update(updates)
+      .eq('id', id)
+      .select('*, profiles(*), chits(*)')
+      .single()
+
+    if (error) {
+      console.error('❌ Update Failed:', error)
+      throw error
+    }
+    return data
+  },
+
+  async deleteLedgerEntry(id) {
+    console.log(`📡 Expunging Ledger Entry ${id}`)
+    const { error } = await supabase
+      .from('ledger')
+      .delete()
+      .eq('id', id)
+
+    if (error) {
+      console.error('❌ Deletion Failed:', error)
+      throw error
+    }
+  },
+
   async getLedgerByDateRange(from, to) {
     const { data, error } = await supabase
       .from('ledger')
@@ -307,83 +272,5 @@ export const financeService = {
       .order('created_at', { ascending: false })
     if (error) throw error
     return data || []
-  },
-
-  async getDefaulters() {
-    const today = new Date().toISOString().split('T')[0]
-    
-    try {
-      const { data, error } = await supabase
-        .from('contributions')
-        .select(`
-          *,
-          chit_members (
-            id,
-            user_id,
-            chit_id,
-            profiles (full_name, mobile_number),
-            chits (name)
-          )
-        `)
-        .eq('payment_status', 'pending')
-        .lt('due_date', today)
-
-      if (error) throw error
-
-      // Group by member
-      const memberMap = {}
-      data.forEach(c => {
-        const mid = c.member_id
-        if (!memberMap[mid]) {
-          memberMap[mid] = {
-            member_id: mid,
-            full_name: c.chit_members?.profiles?.full_name,
-            mobile_number: c.chit_members?.profiles?.mobile_number,
-            chit_name: c.chit_members?.chits?.name,
-            overdue_count: 0,
-            total_overdue_amount: 0,
-            installments: []
-          }
-        }
-        memberMap[mid].overdue_count += 1
-        memberMap[mid].total_overdue_amount += Number(c.amount_due)
-        memberMap[mid].installments.push(c)
-      })
-
-      return Object.values(memberMap).sort((a, b) => b.overdue_count - a.overdue_count)
-    } catch (e) {
-      console.error('Error fetching defaulters:', e)
-      return []
-    }
-  },
-
-  async getDailyCollectionReport(date) {
-    const targetDate = date || new Date().toISOString().split('T')[0]
-    const { data, error } = await supabase
-      .from('contributions')
-      .select('*, chit_members(profiles(full_name)), chits(name)')
-      .eq('payment_status', 'paid')
-      .gte('paid_at', targetDate + 'T00:00:00')
-      .lte('paid_at', targetDate + 'T23:59:59')
-    if (error) throw error
-    return data || []
-  },
-
-  async getMonthlyProfitReport() {
-    const { data, error } = await supabase
-      .from('ledger')
-      .select('*')
-      .eq('reference_type', 'commission')
-    if (error) throw error
-    
-    // Group by month
-    const profitMap = {}
-    data.forEach(item => {
-      const month = item.created_at.slice(0, 7) // YYYY-MM
-      profitMap[month] = (profitMap[month] || 0) + Number(item.amount)
-    })
-    
-    return Object.entries(profitMap).map(([month, amount]) => ({ month, amount }))
-      .sort((a, b) => b.month.localeCompare(a.month))
   }
 }

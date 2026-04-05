@@ -237,8 +237,6 @@ const Ledger = () => {
       await adminService.reversePayment(reverseTarget.id, reverseReason)
       toast.success('Payment Reverted & Voided successfully', { id: 'reverse' })
       setReverseTarget(null)
-      // Ideally refresh ledger here
-      window.location.reload() // Quick fix to ensure UI integrity
     } catch (err) {
       toast.error(err.message || 'Legacy reversal failed', { id: 'reverse' })
     } finally {
@@ -377,6 +375,12 @@ const Ledger = () => {
           loading={loading}
           onRowClick={(row) => setSelectedEntry(row)}
         />
+        {!loading && filteredLedger.length === 0 && (
+          <div className="text-center py-20 bg-white/10 rounded-b-[2.5rem]">
+            <History className="w-12 h-12 text-brand-gold/20 mx-auto mb-4" />
+            <p className="text-sm font-bold text-[#2B2620]/30 uppercase tracking-[0.2em]">No ledger records found in this protocol.</p>
+          </div>
+        )}
       </div>
 
       <footer className="mt-16 text-center">

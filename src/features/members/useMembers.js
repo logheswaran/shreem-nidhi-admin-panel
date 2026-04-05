@@ -1,4 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { supabase } from '../../core/lib/supabase'
 import { memberService } from './api'
 import toast from 'react-hot-toast'
 
@@ -8,12 +10,11 @@ import toast from 'react-hot-toast'
 export const useMembers = () => {
   const queryClient = useQueryClient()
 
-  // 1. DATA QUERY (WITH CACHING)
-  const { data: members = [], isLoading: loading, error } = useQuery({
+  // 1. DATA QUERY (WITH NO CACHING FOR DEBUGGING)
+  const { data: members = [], isLoading: loading, error, refetch } = useQuery({
     queryKey: ['members'],
     queryFn: memberService.getMembers,
-    staleTime: 1000 * 60 * 5, // 5 minutes cache freshness
-    cacheTime: 1000 * 60 * 30, // 30 minutes in RAM
+    staleTime: 0, // Force fresh data every time
   })
 
   // 2. ADD MEMBER MUTATION
@@ -21,6 +22,7 @@ export const useMembers = () => {
     mutationFn: memberService.createMember,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] })
+      queryClient.invalidateQueries({ queryKey: ['defaulters'] })
       toast.success('Member enrolled successfully')
     },
     onError: (err) => {
@@ -34,6 +36,7 @@ export const useMembers = () => {
     mutationFn: ({ id, updates }) => memberService.updateMember(id, updates),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] })
+      queryClient.invalidateQueries({ queryKey: ['defaulters'] })
       toast.success('Member records updated')
     },
     onError: (err) => {
@@ -47,6 +50,7 @@ export const useMembers = () => {
     mutationFn: memberService.deleteMember,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] })
+      queryClient.invalidateQueries({ queryKey: ['defaulters'] })
       toast.success('Member removed from directory')
     },
     onError: (err) => {
@@ -59,31 +63,40 @@ export const useMembers = () => {
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ['member-stats'],
     queryFn: () => memberService.getMemberStats(),
-    staleTime: 1000 * 60 * 2,
+    staleTime: 0,
   })
 
-  // 6. RISK ENGINE UTILITY
-  const computeRisk = (member) => {
-    if (!member) return { level: 'LOW', reason: 'No data' }
-    
-    const monthsElapsed = Math.floor((Date.now() - new Date(member.joined_at).getTime()) / (1000 * 60 * 60 * 24 * 30))
-    const monthsPaid = member.months_paid || 0
-    const missed = Math.max(0, monthsElapsed - monthsPaid)
-    
-    if (missed >= 3 || member.status === 'defaulter') return { 
-      level: 'HIGH', 
-      reason: `${missed} payments missed. Protocol risk critical.` 
+  // 📡 REAL-TIME SUBSCRIPTION
+  useEffect(() => {
+    // Force refresh on mount
+    console.log('🔄 Triggering mount-time refetch...')
+    refetch()
+
+    // Subscribe to changes
+    const channel = supabase
+      .channel('members-changes')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'chit_members' },
+        () => {
+          console.log('⚡ Table chit_members changed. Invalidating query cache.')
+          queryClient.invalidateQueries({ queryKey: ['members'] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
     }
-    if (missed >= 1) return { 
-      level: 'MEDIUM', 
-      reason: `${missed} payment delay detected. Monitoring active.` 
-    }
-    
-    return { level: 'LOW', reason: 'Payment history perfect. High reliability.' }
-  }
+  }, [queryClient, refetch])
+
+  // DEBUG LOGGING
+  useEffect(() => {
+    console.log('📊 MEMBERS UPDATED IN HOOK:', members)
+  }, [members])
 
   return {
-    members: members.map(m => ({ ...m, risk: computeRisk(m) })),
+    members,
     stats,
     statsLoading,
     loading,
@@ -91,12 +104,6 @@ export const useMembers = () => {
     addMember: (payload) => addMutation.mutateAsync(payload),
     editMember: (id, updates) => editMutation.mutateAsync({ id, updates }),
     removeMember: (id) => removeMutation.mutateAsync(id),
-    syncDefaulters: async () => {
-      const risky = members.filter(m => computeRisk(m).level === 'HIGH' && m.status !== 'defaulter')
-      for (const m of risky) {
-        await editMutation.mutateAsync({ id: m.id, updates: { status: 'defaulter' } })
-      }
-    },
     refetch: () => {
       queryClient.invalidateQueries({ queryKey: ['members'] })
       queryClient.invalidateQueries({ queryKey: ['member-stats'] })
