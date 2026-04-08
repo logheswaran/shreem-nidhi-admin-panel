@@ -3,14 +3,14 @@ import { Link } from 'react-router-dom'
 import { 
   ArrowUpRight, Users, Clock, Hash, 
   TrendingUp, AlertCircle, ShieldCheck, 
-  CheckCircle2, ArrowRight
+  CheckCircle2, ArrowRight, Pencil
 } from 'lucide-react'
 import { useQuery } from '@tanstack/react-query'
 import StatusBadge from '../../../shared/components/ui/StatusBadge'
 import ActionButtons from './ActionButtons'
 import { getChitFinancials } from '../api'
 
-const ChitCard = ({ chit, onQuickView }) => {
+const ChitCard = ({ chit, onQuickView, onEdit }) => {
   const { data: financials } = useQuery({
     queryKey: ['chit_financials', chit.id],
     queryFn: () => getChitFinancials(chit.id),
@@ -73,6 +73,15 @@ const ChitCard = ({ chit, onQuickView }) => {
         </div>
         
         <div className="flex items-center gap-3">
+          {chit.status === 'forming' && (
+            <button
+              onClick={(e) => { e.stopPropagation(); onEdit?.(chit) }}
+              className="w-10 h-10 rounded-xl bg-brand-ivory border border-brand-gold/10 flex items-center justify-center text-brand-gold hover:bg-brand-gold hover:text-white transition-all shrink-0 shadow-sm"
+              title="Edit Chit"
+            >
+              <Pencil className="w-4 h-4" />
+            </button>
+          )}
           <div className={`flex items-center gap-1.5 px-3 py-1 rounded-full ${health.color} bg-current/5 border border-current/10 shrink-0`}>
             {health.icon}
             <span className="text-[8px] font-black tracking-widest">{health.label}</span>

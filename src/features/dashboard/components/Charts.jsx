@@ -2,6 +2,18 @@ import React, { useMemo, useState } from 'react'
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts'
 import { format, subDays, isSameDay, startOfWeek, endOfWeek, eachDayOfInterval } from 'date-fns'
 
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-[#2B2620] p-4 rounded-xl shadow-xl border border-brand-gold/20">
+        <p className="text-brand-gold font-bold text-[10px] uppercase tracking-widest mb-1">{label || payload[0].name}</p>
+        <p className="text-white font-headline text-lg">₹{payload[0].value.toLocaleString()}</p>
+      </div>
+    )
+  }
+  return null
+}
+
 const AnalyticsCharts = ({ ledger = [], collectionHealth }) => {
   const [trendView, setTrendView] = useState('daily') // 'daily' | 'weekly'
 
@@ -59,18 +71,6 @@ const AnalyticsCharts = ({ ledger = [], collectionHealth }) => {
   }, [collectionHealth])
 
   const PIE_COLORS = ['#1D9E75', '#BA7517', '#E24B4A']
-
-  const CustomTooltip = ({ active, payload, label }) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="bg-[#2B2620] p-4 rounded-xl shadow-xl border border-brand-gold/20">
-          <p className="text-brand-gold font-bold text-[10px] uppercase tracking-widest mb-1">{label || payload[0].name}</p>
-          <p className="text-white font-headline text-lg">₹{payload[0].value.toLocaleString()}</p>
-        </div>
-      )
-    }
-    return null
-  }
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-12">

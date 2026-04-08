@@ -6,6 +6,7 @@ import {
   getChitFullDetails,
   getActiveAuctionRound,
   createChit,
+  updateChit,
   startMonth,
   selectWinner,
   openAuction,
@@ -61,6 +62,21 @@ export const useCreateChit = () => {
     },
     onError: (err) => {
       toast.error(`Creation failed: ${err.message}`)
+    }
+  })
+}
+
+export const useUpdateChit = () => {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({ id, updates }) => updateChit(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['chits'] })
+      queryClient.invalidateQueries({ queryKey: ['chit'] })
+      toast.success('Chit protocol updated successfully.')
+    },
+    onError: (err) => {
+      toast.error(`Update failed: ${err.message}`)
     }
   })
 }

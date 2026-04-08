@@ -1,11 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { notificationService } from './api'
 import toast from 'react-hot-toast'
-
-// Mock storage for notifications since no backend table provided
-let mockNotifications = [
-  { id: 1, title: 'Month 5 Generation', message: 'Contributions for Month 5 are now open for Platinum 5L.', target: 'Platinum 5L Members', status: 'delivered', created_at: new Date(Date.now() - 1000 * 60 * 60 * 2).toISOString() },
-  { id: 2, title: 'Loan Disbursement', message: 'Your credit request for ₹50,000 has been approved.', target: 'Member: Logheswaran', status: 'delivered', created_at: new Date(Date.now() - 1000 * 60 * 60 * 24).toISOString() }
-]
 
 /**
  * Hook for fetching notification history with smart caching.
@@ -14,9 +9,7 @@ export const useNotifications = () => {
   return useQuery({
     queryKey: ['notifications'],
     queryFn: async () => {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500))
-      return [...mockNotifications].sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+      return notificationService.getNotifications()
     },
     staleTime: 1000 * 60 * 5,
     cacheTime: 1000 * 60 * 10,
@@ -29,18 +22,8 @@ export const useNotifications = () => {
 export const useNotificationActions = () => {
   const queryClient = useQueryClient()
 
-  return useMutation({
-    mutationFn: async (payload) => {
-      await new Promise(resolve => setTimeout(resolve, 800))
-      const newNotif = {
-        id: Date.now(),
-        ...payload,
-        status: 'delivered',
-        created_at: new Date().toISOString()
-      }
-      mockNotifications = [newNotif, ...mockNotifications]
-      return newNotif
-    },
+  const sendMutation = useMutation({
+    mutationFn: (payload) => notificationService.sendNotification(payload),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['notifications'] })
       toast.success('Broadcast transmitted successfully!')
@@ -49,4 +32,46 @@ export const useNotificationActions = () => {
       toast.error('Failed to dispatch broadcast')
     }
   })
+
+  const updateMutation = useMutation({
+    mutationFn: ({ id, updates }) => notificationService.updateNotification(id, updates),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      toast.success('Broadcast updated successfully!')
+    },
+    onError: () => {
+      toast.error('Failed to update broadcast')
+    }
+  })
+
+  const deleteMutation = useMutation({
+    mutationFn: (id) => notificationService.deleteNotification(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      toast.success('Broadcast removed successfully!')
+    },
+    onError: () => {
+      toast.error('Failed to remove broadcast')
+    }
+  })
+
+  const resendMutation = useMutation({
+    mutationFn: (notification) => notificationService.resendFailed(notification),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['notifications'] })
+      toast.success('Failed transmissions resent successfully!')
+    },
+    onError: () => {
+      toast.error('Failed to resend transmission')
+    }
+  })
+
+  return {
+    mutateAsync: sendMutation.mutateAsync,
+    sendBroadcast: sendMutation.mutateAsync,
+    updateBroadcast: updateMutation.mutateAsync,
+    deleteBroadcast: deleteMutation.mutateAsync,
+    resendFailed: resendMutation.mutateAsync,
+    isLoading: sendMutation.isLoading || updateMutation.isLoading || deleteMutation.isLoading || resendMutation.isLoading
+  }
 }

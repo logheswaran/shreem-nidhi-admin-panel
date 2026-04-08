@@ -20,7 +20,7 @@ import PremiumDropdown from '../../shared/components/ui/PremiumDropdown'
  */
 const Notifications = () => {
   const { data: notifications = [], isLoading: loading } = useNotifications()
-  const { mutateAsync: sendBroadcast, isLoading: processing } = useNotificationActions()
+  const { sendBroadcast, resendFailed, isLoading: processing } = useNotificationActions()
   const { members = [] } = useMembers()
   
   // State Management
@@ -108,6 +108,15 @@ const Notifications = () => {
     })
     setIsDetailOpen(false)
     setIsModalOpen(true)
+  }
+
+  const handleResendFailed = async (broadcast) => {
+    try {
+      await resendFailed(broadcast)
+      setIsDetailOpen(false)
+    } catch (error) {
+      // handled in hook
+    }
   }
 
   const toggleChannel = (ch) => {
@@ -464,9 +473,7 @@ const Notifications = () => {
         onClose={() => setIsDetailOpen(false)}
         broadcast={selectedBroadcast}
         onDuplicate={handleDuplicate}
-        onResendFailed={(b) => {
-          console.log("Resending failed for:", b.id)
-        }}
+        onResendFailed={handleResendFailed}
       />
     </div>
   )

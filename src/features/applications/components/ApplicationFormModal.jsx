@@ -3,7 +3,7 @@ import { X, User, Phone, Briefcase, LayoutGrid, Check, Sparkles } from 'lucide-r
 import Modal from '../../../shared/components/ui/Modal'
 import PremiumDropdown from '../../../shared/components/ui/PremiumDropdown'
 
-const ApplicationFormModal = ({ isOpen, onClose, onSubmit, chits = [] }) => {
+const ApplicationFormModal = ({ isOpen, onClose, onSubmit, chits = [], submitting = false }) => {
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -34,12 +34,14 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, chits = [] }) => {
 
     onSubmit({
       ...formData,
-      id: `APP-${Math.floor(Math.random() * 1000)}`,
       applied_at: new Date().toISOString(),
-      chits: selectedChit,
+      chit_id: formData.chit_id,
+      monthly_income: income,
+      kyc_status: formData.kyc_status,
+      status: 'pending',
       profiles: { full_name: formData.name, mobile_number: formData.phone },
-      risk: { level: riskLevel, reason: riskReason },
-      status: 'pending'
+      chits: selectedChit,
+      risk: { level: riskLevel, reason: riskReason }
     })
     
     setFormData({ name: '', phone: '', income: '', chit_id: '', kyc_status: 'pending' })
@@ -107,10 +109,10 @@ const ApplicationFormModal = ({ isOpen, onClose, onSubmit, chits = [] }) => {
 
         <button
           type="submit"
+          disabled={submitting}
           className="w-full heritage-gradient py-5 rounded-[2rem] text-white text-[10px] font-black uppercase tracking-[0.3em] shadow-xl hover:brightness-110 active:scale-[0.98] transition-all flex items-center justify-center gap-3 mt-4"
         >
-          <Sparkles className="w-5 h-5" />
-          Provision Mock Application
+          {submitting ? 'Saving...' : <><Sparkles className="w-5 h-5" /> Provision Application</>}
         </button>
       </form>
     </Modal>

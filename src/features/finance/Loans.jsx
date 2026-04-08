@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react'
-import { Landmark, IndianRupee, Plus, Users, ArrowUpRight, CheckCircle2, Info, Landmark as BankIcon } from 'lucide-react'
+import { Landmark, IndianRupee, Plus, Users, ArrowUpRight, CheckCircle2, Info, Landmark as BankIcon, XCircle, AlertTriangle } from 'lucide-react'
 import { financeService } from './api'
 import { memberService } from '../members/api'
 import DataTable from '../../shared/components/ui/DataTable'
@@ -16,6 +16,9 @@ const Loans = () => {
   const [newLoan, setNewLoan] = useState({ memberId: '', amount: '' })
   const [repayData, setRepayData] = useState({ loanId: null, amount: '', max: 0 })
   const [processing, setProcessing] = useState(false)
+  
+  // Close/Write-off modal state
+  const [closeModal, setCloseModal] = useState({ open: false, type: null, loan: null, reason: '' })
 
   const fetchData = async () => {
     try {
@@ -80,6 +83,28 @@ const Loans = () => {
     }
   }
 
+  const handleCloseOrWriteOff = async () => {
+    const { type, loan, reason } = closeModal
+    setProcessing(true)
+    try {
+      if (type === 'close') {
+        toast.loading('Closing loan account...', { id: 'loan-close' })
+        await financeService.closeLoan(loan.id, reason || 'manual_closure')
+        toast.success('Loan closed successfully!', { id: 'loan-close' })
+      } else {
+        toast.loading('Processing write-off...', { id: 'loan-close' })
+        await financeService.writeOffLoan(loan.id, reason)
+        toast.success('Loan written off and recorded!', { id: 'loan-close' })
+      }
+      setCloseModal({ open: false, type: null, loan: null, reason: '' })
+      fetchData()
+    } catch (error) {
+      toast.error(error.message || 'Operation failed', { id: 'loan-close' })
+    } finally {
+      setProcessing(false)
+    }
+  }
+
   const columns = [
     { 
       header: 'Beneficiary Trust', 
@@ -115,15 +140,43 @@ const Loans = () => {
     },
     { header: 'Admittance', render: (row) => <StatusBadge status={row.status} /> },
     { 
-      header: 'Action', 
-      render: (row) => row.status === 'active' && (
-        <button 
-          onClick={() => openRepayModal(row)}
-          className="bg-[#2B2620] text-white text-[10px] font-black uppercase tracking-widest px-6 py-2.5 rounded-full hover:brightness-110 transition-all shadow-md active:scale-95 flex items-center gap-2"
-        >
-          <IndianRupee className="w-3 h-3" /> Execute Repayment
-        </button>
-      )
+      header: 'Actions', 
+      render: (row) => {
+        if (row.status === 'closed') {
+          return <span className="text-[10px] font-black uppercase tracking-widest text-green-600 bg-green-50 px-3 py-1 rounded-full">Closed</span>
+        }
+        if (row.status === 'written_off') {
+          return <span className="text-[10px] font-black uppercase tracking-widest text-red-600 bg-red-50 px-3 py-1 rounded-full">Written Off</span>
+        }
+        if (row.status === 'active') {
+          return (
+            <div className="flex gap-2 flex-wrap">
+              <button 
+                onClick={() => openRepayModal(row)}
+                className="bg-[#2B2620] text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full hover:brightness-110 transition-all shadow-md active:scale-95 flex items-center gap-1"
+              >
+                <IndianRupee className="w-3 h-3" /> Repay
+              </button>
+              {Number(row.balance) === 0 ? (
+                <button 
+                  onClick={() => setCloseModal({ open: true, type: 'close', loan: row, reason: '' })}
+                  className="bg-green-600 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full hover:bg-green-700 transition-all shadow-md active:scale-95 flex items-center gap-1"
+                >
+                  <CheckCircle2 className="w-3 h-3" /> Close
+                </button>
+              ) : (
+                <button 
+                  onClick={() => setCloseModal({ open: true, type: 'writeoff', loan: row, reason: '' })}
+                  className="bg-red-500 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full hover:bg-red-600 transition-all shadow-md active:scale-95 flex items-center gap-1"
+                >
+                  <XCircle className="w-3 h-3" /> Write Off
+                </button>
+              )}
+            </div>
+          )
+        }
+        return null
+      }
     }
   ]
 
@@ -268,6 +321,84 @@ const Loans = () => {
            </button>
         </form>
       </Modal>
+
+      {/* Close/Write-off Confirmation Modal */}
+      {closeModal.open && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50">
+          <div className="bg-white rounded-3xl p-8 max-w-md w-full mx-4 shadow-2xl">
+            <div className="flex items-center gap-3 mb-6">
+              <div className={`w-12 h-12 rounded-2xl flex items-center justify-center ${
+                closeModal.type === 'close' ? 'bg-green-100' : 'bg-red-100'
+              }`}>
+                <AlertTriangle className={`w-6 h-6 ${
+                  closeModal.type === 'close' ? 'text-green-600' : 'text-red-600'
+                }`} />
+              </div>
+              <div>
+                <h3 className="font-headline font-bold text-xl text-[#2B2620]">
+                  {closeModal.type === 'close' ? 'Close Loan Account' : 'Write Off Loan'}
+                </h3>
+                <p className="text-sm text-brand-text/50">
+                  {closeModal.loan?.chit_members?.profiles?.full_name}
+                </p>
+              </div>
+            </div>
+
+            {closeModal.type === 'close' ? (
+              <p className="text-sm text-brand-text/70 mb-6">
+                This loan has a zero balance and can be closed. This action will mark the loan as completed and update the audit trail.
+              </p>
+            ) : (
+              <>
+                <div className="bg-red-50 p-4 rounded-2xl mb-4">
+                  <p className="text-sm text-red-700 font-bold">
+                    Outstanding Balance: ₹{Number(closeModal.loan?.balance || 0).toLocaleString()}
+                  </p>
+                  <p className="text-xs text-red-600 mt-1">
+                    This amount will be written off as a loss.
+                  </p>
+                </div>
+                <p className="text-sm text-brand-text/70 mb-4">
+                  Write-off is a financial decision that affects the books. Please provide a reason for compliance.
+                </p>
+                <textarea
+                  placeholder="Reason for write-off (required)..."
+                  className="w-full p-4 border border-brand-gold/20 rounded-2xl text-sm mb-4 focus:outline-none focus:border-brand-gold/50"
+                  rows={3}
+                  value={closeModal.reason}
+                  onChange={(e) => setCloseModal({ ...closeModal, reason: e.target.value })}
+                />
+              </>
+            )}
+
+            <div className="flex gap-3">
+              <button
+                onClick={() => setCloseModal({ open: false, type: null, loan: null, reason: '' })}
+                disabled={processing}
+                className="flex-1 px-6 py-3 rounded-full border border-brand-gold/20 text-sm font-bold hover:bg-brand-gold/5 transition-all disabled:opacity-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleCloseOrWriteOff}
+                disabled={processing || (closeModal.type === 'writeoff' && !closeModal.reason.trim())}
+                className={`flex-1 px-6 py-3 rounded-full text-white text-sm font-bold transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 ${
+                  closeModal.type === 'close' ? 'bg-green-600 hover:bg-green-700' : 'bg-red-500 hover:bg-red-600'
+                }`}
+              >
+                {processing ? (
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                ) : (
+                  <>
+                    {closeModal.type === 'close' ? <CheckCircle2 className="w-4 h-4" /> : <XCircle className="w-4 h-4" />}
+                    {closeModal.type === 'close' ? 'Close Loan' : 'Confirm Write-Off'}
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

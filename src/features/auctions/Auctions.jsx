@@ -8,19 +8,27 @@ import Modal from '../../shared/components/ui/Modal'
 import ConfirmDialog from '../../shared/components/ui/ConfirmDialog'
 import LiveAuctionPanel from './components/LiveAuctionPanel'
 import toast from 'react-hot-toast'
-import { supabase } from '../../core/lib/supabase'
 
 const Auctions = () => {
   const { data: allChits = [] } = useChits()
-  const auctionChits = allChits.filter(c => c.chit_type === 'auction')
+  const auctionChits = allChits.filter(c => c.chit_type === 'traditional')
   
-  const [activeChitId, setActiveChitId] = useState(auctionChits[0]?.id || null)
-  const { data: rounds = [], isLoading: loading } = useAuctionRounds(activeChitId)
+  const [activeChitId, setActiveChitId] = useState(null)
+  
+  // Hardened Initialization: Reset active chit when list changes or if currently null
+  React.useEffect(() => {
+    if (auctionChits.length > 0 && !activeChitId) {
+      setActiveChitId(auctionChits[0].id)
+    }
+  }, [auctionChits, activeChitId])
+
+  const [roundPage, setRoundPage] = useState(0)
+  const { data: rounds = [], isLoading: loading } = useAuctionRounds(activeChitId, roundPage, 50)
   
   const [selectedRoundId, setSelectedRoundId] = useState(null)
   const { data: bids = [], isLoading: bidsLoading } = useBids(selectedRoundId)
   
-  const { openAuction, closeAuction, isProcessing } = useAuctionActions()
+  const { openAuction, closeAuction, cancelAuction, isProcessing } = useAuctionActions()
   
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [isOpenConfirmModal, setIsOpenConfirmModal] = useState(false)
@@ -31,6 +39,8 @@ const Auctions = () => {
     if (!rounds.length) return 1
     return Math.max(...rounds.map(r => r.month_number)) + 1
   }, [rounds])
+
+  const displayedRounds = useMemo(() => rounds, [rounds])
 
   const handleAuditBids = (round) => {
     setSelectedRoundId(round.id)
@@ -49,8 +59,7 @@ const Auctions = () => {
   const handleCancelAuction = async () => {
     if (!confirmCancel.round) return
     try {
-      const { error } = await supabase.rpc('admin_cancel_auction', { p_auction_id: confirmCancel.round.id })
-      if (error) throw error
+      await cancelAuction(confirmCancel.round.id)
       toast.success('Auction Cancelled!')
       setConfirmCancel({ isOpen: false, round: null })
       setIsModalOpen(false)
@@ -63,7 +72,9 @@ const Auctions = () => {
     try {
       await openAuction({ chitId: activeChitId, month: nextMonth })
       setIsOpenConfirmModal(false)
-    } catch (err) {}
+    } catch (err) {
+      toast.error(err.message || 'Failed to open auction')
+    }
   }
 
   const handleExecuteRequest = (numBids) => {
@@ -92,7 +103,7 @@ const Auctions = () => {
     { header: 'Bidding Status', render: (row) => <StatusBadge status={row.status} /> },
     { 
       header: 'Winning Bid', 
-      render: (row) => row.status === 'closed' ? <span className="font-bold text-green-600">₹{Number(row.winning_bid_amount).toLocaleString()}</span> : <span className="italic text-brand-text/30">In Progress</span> 
+      render: (row) => row.status === 'closed' ? <span className="font-bold text-green-600">₹{Number(row.winning_bid_amount || 0).toLocaleString()}</span> : <span className="italic text-brand-text/30">In Progress</span> 
     },
     { 
       header: 'Action', 
@@ -119,7 +130,7 @@ const Auctions = () => {
         </div>
       )
     },
-    { header: 'Bid Amount', render: (row) => <span className="font-bold text-brand-gold">₹{Number(row.bid_amount).toLocaleString()}</span> },
+    { header: 'Bid Amount', render: (row) => <span className="font-bold text-brand-gold">₹{Number(row.bid_amount || 0).toLocaleString()}</span> },
     { header: 'Submitted At', render: (row) => <span className="text-xs opacity-40">{new Date(row.bid_at).toLocaleString()}</span> }
   ]
 
@@ -156,7 +167,28 @@ const Auctions = () => {
          ))}
       </div>
 
-      <DataTable columns={columns} data={rounds} loading={loading} />
+      <div className="space-y-4">
+        <DataTable columns={columns} data={displayedRounds} loading={loading} />
+        <div className="flex items-center justify-center gap-3">
+          <button
+            onClick={() => setRoundPage(p => Math.max(0, p - 1))}
+            disabled={roundPage === 0}
+            className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${roundPage === 0 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-white text-[#2B2620] border border-brand-gold/10 hover:bg-brand-gold/5 shadow-sm'}`}
+          >
+            Previous
+          </button>
+          <div className="flex items-center px-4 py-2.5 bg-white rounded-xl border border-brand-gold/10 shadow-sm">
+            <span className="text-[10px] font-black uppercase tracking-widest text-brand-gold">Page {roundPage + 1}</span>
+          </div>
+          <button
+            onClick={() => setRoundPage(p => p + 1)}
+            disabled={rounds.length < 50}
+            className={`px-5 py-2.5 rounded-xl text-[9px] font-black uppercase tracking-widest transition-all ${rounds.length < 50 ? 'bg-gray-100 text-gray-300 cursor-not-allowed' : 'bg-white text-[#2B2620] border border-brand-gold/10 hover:bg-brand-gold/5 shadow-sm'}`}
+          >
+            Next
+          </button>
+        </div>
+      </div>
 
       <Modal 
         isOpen={isModalOpen} 

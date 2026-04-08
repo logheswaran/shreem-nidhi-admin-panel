@@ -6,6 +6,32 @@ import {
 import ConfirmDialog from '../../../shared/components/ui/ConfirmDialog'
 import { useChitActions } from '../hooks'
 
+// --- Pill Component: Heritage Ivory Theme --- //
+const ActionPill = ({ label, icon: Icon, onClick, color = 'gold', disabled = false, variant = 'ghost', isPending = false }) => {
+  const base = "flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-[9px] font-black uppercase tracking-[0.15em] transition-all duration-300 shadow-sm border border-brand-gold/10 flex-1 whitespace-nowrap"
+  
+  const themes = {
+    // Primary Gold Theme
+    gold: variant === 'solid' ? 'bg-brand-gold text-white hover:brightness-110 shadow-gold' : 'bg-brand-gold/5 text-brand-gold hover:bg-brand-gold/10',
+    // Secondary Ivory Theme
+    ivory: variant === 'solid' ? 'bg-brand-ivory text-[#2B2620] hover:bg-brand-gold/10' : 'bg-brand-ivory text-[#2B2620]/60 hover:text-[#2B2620] hover:bg-brand-gold/5',
+    // Danger/Warning
+    danger: variant === 'solid' ? 'bg-red-600 text-white hover:bg-red-700 shadow-red' : 'bg-red-50 text-red-600 hover:bg-red-100',
+    warning: variant === 'solid' ? 'bg-amber-600 text-white hover:bg-amber-700 shadow-amber' : 'bg-amber-50 text-amber-600 hover:bg-amber-100',
+  }
+
+  return (
+    <button 
+      onClick={(e) => { e.stopPropagation(); onClick(); }}
+      disabled={disabled || isPending}
+      className={`${base} ${themes[color]} ${disabled ? 'opacity-30 cursor-not-allowed grayscale' : 'hover:translate-y-[-1px] active:scale-95'}`}
+    >
+      <Icon className="w-3.5 h-3.5" />
+      {label}
+    </button>
+  )
+}
+
 const ActionButtons = ({ chit }) => {
   const [confirmState, setConfirmState] = useState({ isOpen: false, type: null, title: '', message: '' })
   const { mutate, isPending } = useChitActions()
@@ -54,32 +80,6 @@ const ActionButtons = ({ chit }) => {
   const handleConfirm = () => {
     mutate({ actionType: confirmState.type, payload: { chitId: chit.id, month: chit.current_month } })
     setConfirmState({ isOpen: false, type: null, title: '', message: '' })
-  }
-
-  // --- Pill Component: Heritage Ivory Theme --- //
-  const ActionPill = ({ label, icon: Icon, onClick, color = 'gold', disabled = false, variant = 'ghost' }) => {
-    const base = "flex items-center justify-center gap-2 px-5 py-3 rounded-xl text-[9px] font-black uppercase tracking-[0.15em] transition-all duration-300 shadow-sm border border-brand-gold/10 flex-1 whitespace-nowrap"
-    
-    const themes = {
-      // Primary Gold Theme
-      gold: variant === 'solid' ? 'bg-brand-gold text-white hover:brightness-110 shadow-gold' : 'bg-brand-gold/5 text-brand-gold hover:bg-brand-gold/10',
-      // Secondary Ivory Theme
-      ivory: variant === 'solid' ? 'bg-brand-ivory text-[#2B2620] hover:bg-brand-gold/10' : 'bg-brand-ivory text-[#2B2620]/60 hover:text-[#2B2620] hover:bg-brand-gold/5',
-      // Danger/Warning
-      danger: variant === 'solid' ? 'bg-red-600 text-white hover:bg-red-700 shadow-red' : 'bg-red-50 text-red-600 hover:bg-red-100',
-      warning: variant === 'solid' ? 'bg-amber-600 text-white hover:bg-amber-700 shadow-amber' : 'bg-amber-50 text-amber-600 hover:bg-amber-100',
-    }
-
-    return (
-      <button 
-        onClick={(e) => { e.stopPropagation(); onClick(); }}
-        disabled={disabled || isPending}
-        className={`${base} ${themes[color]} ${disabled ? 'opacity-30 cursor-not-allowed grayscale' : 'hover:translate-y-[-1px] active:scale-95'}`}
-      >
-        <Icon className="w-3.5 h-3.5" />
-        {label}
-      </button>
-    )
   }
 
   // --- Logic Helpers --- //

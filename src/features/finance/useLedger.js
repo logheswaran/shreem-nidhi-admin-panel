@@ -1,4 +1,4 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useMemo, useEffect } from 'react'
 import { financeService } from './api'
 import toast from 'react-hot-toast'
@@ -11,8 +11,8 @@ export const useLedger = () => {
 
   // 1. DATA QUERY (WITH NO CACHING FOR AUDIT INTEGRITY)
   const { data: ledger = [], isLoading: loading, error } = useQuery({
-    queryKey: ['ledger'],
-    queryFn: financeService.getLedger,
+    queryKey: ['ledger', 0, 100],
+    queryFn: () => financeService.getLedger({ page: 0, pageSize: 100 }),
     staleTime: 0, // Force fresh audit data
   })
 
@@ -56,54 +56,11 @@ export const useLedger = () => {
     }
   }, [ledger])
 
-  // 3. MUTATIONS
-  const addMutation = useMutation({
-    mutationFn: ({ payload, metadata }) => financeService.createLedgerEntry(payload, metadata),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ledger'] })
-      queryClient.invalidateQueries({ queryKey: ['defaulters'] })
-      toast.success('Ledger entry recorded')
-    },
-    onError: (err) => {
-      console.error('Ledger add error:', err)
-      toast.error('Failed to record entry')
-    }
-  })
-
-  const editMutation = useMutation({
-    mutationFn: ({ id, updates }) => financeService.updateLedgerEntry(id, updates),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ledger'] })
-      queryClient.invalidateQueries({ queryKey: ['defaulters'] })
-      toast.success('Ledger entry updated')
-    },
-    onError: (err) => {
-      console.error('Ledger edit error:', err)
-      toast.error('Failed to update entry')
-    }
-  })
-
-  const removeMutation = useMutation({
-    mutationFn: financeService.deleteLedgerEntry,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['ledger'] })
-      queryClient.invalidateQueries({ queryKey: ['defaulters'] })
-      toast.success('Entry removed from ledger')
-    },
-    onError: (err) => {
-      console.error('Ledger delete error:', err)
-      toast.error('Failed to delete entry')
-    }
-  })
-
   return {
     ledger,
     loading,
     error,
     stats,
-    addEntry: (data) => addMutation.mutateAsync(data),
-    editEntry: (id, updates) => editMutation.mutateAsync({ id, updates }),
-    removeEntry: (id) => removeMutation.mutateAsync(id),
     refetch: () => queryClient.invalidateQueries({ queryKey: ['ledger'] })
   }
 }

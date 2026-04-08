@@ -1,17 +1,22 @@
 import { supabase } from '../../core/lib/supabase'
 
 // READS
-export const getAuctionRounds = async (chitId) => {
+export const getAuctionRounds = async (chitId, { page = 0, pageSize = 50 } = {}) => {
   try {
     const { data, error } = await supabase
       .from('auction_rounds')
       .select('*')
       .eq('chit_id', chitId)
       .order('month_number', { ascending: false })
-    if (error) throw error
+      .range(page * pageSize, (page + 1) * pageSize - 1)
+    if (error) {
+      console.error('📡 SUPABASE ERROR (getAuctionRounds):', error)
+      throw error
+    }
     return data || []
   } catch (e) {
-    return []
+    console.error('❌ Auction Fetch Failure:', e)
+    throw e
   }
 }
 
@@ -51,11 +56,19 @@ export const closeAuction = async (auctionId) => {
   if (error) throw error
 }
 
+export const cancelAuction = async (auctionId) => {
+  const { error } = await supabase.rpc('admin_cancel_auction', {
+    p_auction_id: auctionId
+  })
+  if (error) throw error
+}
+
 // Legacy compat object
 export const auctionService = {
   getAuctionRounds,
   getBids,
   openAuction,
   placeBid,
-  closeAuction
+  closeAuction,
+  cancelAuction
 }

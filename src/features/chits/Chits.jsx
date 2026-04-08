@@ -11,6 +11,7 @@ const Chits = () => {
   const [searchQuery, setSearchQuery] = useState('')
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [selectedChit, setSelectedChit] = useState(null)
+  const [editingChit, setEditingChit] = useState(null)
   
   const { data: chits = [], isLoading, isError } = useChits(filterStatus, searchQuery)
 
@@ -45,7 +46,7 @@ const Chits = () => {
           <p className="text-on-surface-variant font-body mt-2 opacity-70">Operational registry for administrative group management.</p>
         </div>
         <button 
-          onClick={() => setIsModalOpen(true)}
+          onClick={() => { setEditingChit(null); setIsModalOpen(true) }}
           className="heritage-gradient px-8 py-3 text-white text-[10px] font-black uppercase tracking-widest rounded-full flex items-center gap-3 shadow-xl hover:brightness-110 transition-all active:scale-95"
         >
           <Plus className="w-4 h-4" /> Launch New Group
@@ -145,6 +146,7 @@ const Chits = () => {
             key={chit.id} 
             chit={chit} 
             onQuickView={(c) => setSelectedChit(c)}
+            onEdit={(c) => { setEditingChit(c); setIsModalOpen(true) }}
           />
         ))}
 
@@ -158,7 +160,7 @@ const Chits = () => {
       </div>
 
       {/* 🔮 Overlays: Registry Standards */}
-      <CreateChitModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+      <CreateChitModal isOpen={isModalOpen} onClose={() => { setIsModalOpen(false); setEditingChit(null) }} initialData={editingChit} />
       <ChitQuickView isOpen={!!selectedChit} onClose={() => setSelectedChit(null)} chit={selectedChit} />
     </div>
   )

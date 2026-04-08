@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { 
   ChevronLeft, 
@@ -9,7 +9,9 @@ import {
   AlertCircle,
   XCircle,
   History,
-  ArrowRightCircle
+  ArrowRightCircle,
+  Filter,
+  ChevronDown
 } from 'lucide-react'
 import { financeService } from './api'
 import { chitService } from '../chits/api'
@@ -27,6 +29,13 @@ const PaymentGrid = () => {
   const [isModalOpen, setIsModalOpen] = useState(false)
   const [paymentMode, setPaymentMode] = useState('Cash')
   const [paymentRef, setPaymentRef] = useState('')
+  
+  // Filter states
+  const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState('all') // all | paid | pending | overdue
+  const [monthRangeStart, setMonthRangeStart] = useState('')
+  const [monthRangeEnd, setMonthRangeEnd] = useState('')
+  const [showFilters, setShowFilters] = useState(false)
 
   const fetchData = async () => {
     try {
@@ -94,6 +103,50 @@ const PaymentGrid = () => {
   if (loading) return <div className="h-96 flex items-center justify-center animate-pulse text-brand-gold font-bold">Synchronizing Vault...</div>
 
   const months = Array.from({ length: chit?.duration_months || 0 }, (_, i) => i + 1)
+  
+  // Filtered months based on range
+  const displayMonths = useMemo(() => {
+    let filtered = months
+    if (monthRangeStart) filtered = filtered.filter(m => m >= parseInt(monthRangeStart))
+    if (monthRangeEnd) filtered = filtered.filter(m => m <= parseInt(monthRangeEnd))
+    return filtered
+  }, [months, monthRangeStart, monthRangeEnd])
+  
+  // Filtered members
+  const filteredMembers = useMemo(() => {
+    const today = new Date().toISOString().split('T')[0]
+    
+    return members.filter(member => {
+      // Search filter
+      if (searchQuery) {
+        const query = searchQuery.toLowerCase()
+        const name = member.profiles?.full_name?.toLowerCase() || ''
+        const phone = member.profiles?.mobile_number || ''
+        if (!name.includes(query) && !phone.includes(query)) return false
+      }
+      
+      // Status filter
+      if (statusFilter !== 'all') {
+        const memberConts = contributions.filter(c => c.member_id === member.id)
+        const hasPaid = memberConts.some(c => c.payment_status === 'paid')
+        const hasOverdue = memberConts.some(c => c.payment_status === 'pending' && c.due_date < today)
+        const hasPending = memberConts.some(c => c.payment_status === 'pending' && c.due_date >= today)
+        
+        if (statusFilter === 'paid' && !hasPaid) return false
+        if (statusFilter === 'overdue' && !hasOverdue) return false
+        if (statusFilter === 'pending' && !hasPending) return false
+      }
+      
+      return true
+    })
+  }, [members, contributions, searchQuery, statusFilter])
+  
+  const clearFilters = () => {
+    setSearchQuery('')
+    setStatusFilter('all')
+    setMonthRangeStart('')
+    setMonthRangeEnd('')
+  }
 
   return (
     <div className="animate-in fade-in duration-700">
@@ -129,13 +182,109 @@ const PaymentGrid = () => {
         </div>
       </header>
 
+      {/* Filter Bar */}
+      <div className="mb-6 bg-white rounded-2xl border border-brand-gold/10 shadow-sm overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-brand-gold/5">
+          <div className="flex items-center gap-4 flex-1">
+            <div className="relative flex-1 max-w-md">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-brand-text/30" />
+              <input
+                type="text"
+                placeholder="Search member name or phone..."
+                className="w-full pl-11 pr-4 py-2.5 rounded-xl bg-gray-50 border border-brand-gold/10 text-sm font-bold focus:outline-none focus:border-brand-gold/30"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
+            <button
+              onClick={() => setShowFilters(!showFilters)}
+              className={`flex items-center gap-2 px-4 py-2.5 rounded-xl border text-sm font-bold transition-all ${
+                showFilters ? 'bg-brand-gold text-white border-brand-gold' : 'bg-white border-brand-gold/10 text-brand-text/60 hover:border-brand-gold/30'
+              }`}
+            >
+              <Filter className="w-4 h-4" />
+              Filters
+              <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+            </button>
+          </div>
+          {(searchQuery || statusFilter !== 'all' || monthRangeStart || monthRangeEnd) && (
+            <button
+              onClick={clearFilters}
+              className="ml-4 px-4 py-2 text-xs font-bold text-red-500 hover:bg-red-50 rounded-lg transition-all"
+            >
+              Clear All
+            </button>
+          )}
+        </div>
+        
+        {showFilters && (
+          <div className="p-4 bg-gray-50/50 flex flex-wrap items-center gap-4">
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">Status</label>
+              <div className="flex gap-2">
+                {[
+                  { value: 'all', label: 'All', color: 'bg-gray-500' },
+                  { value: 'paid', label: 'Paid', color: 'bg-green-500' },
+                  { value: 'pending', label: 'Pending', color: 'bg-amber-400' },
+                  { value: 'overdue', label: 'Overdue', color: 'bg-red-500' }
+                ].map(opt => (
+                  <button
+                    key={opt.value}
+                    onClick={() => setStatusFilter(opt.value)}
+                    className={`flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      statusFilter === opt.value 
+                        ? 'bg-[#2B2620] text-white' 
+                        : 'bg-white border border-brand-gold/10 text-brand-text/60 hover:border-brand-gold/30'
+                    }`}
+                  >
+                    <span className={`w-2 h-2 rounded-full ${opt.color}`}></span>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            
+            <div className="h-8 w-px bg-brand-gold/10"></div>
+            
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">Month Range</label>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min="1"
+                  max={chit?.duration_months || 12}
+                  placeholder="From"
+                  className="w-20 px-3 py-1.5 rounded-lg bg-white border border-brand-gold/10 text-xs font-bold focus:outline-none focus:border-brand-gold/30"
+                  value={monthRangeStart}
+                  onChange={(e) => setMonthRangeStart(e.target.value)}
+                />
+                <span className="text-brand-text/30">—</span>
+                <input
+                  type="number"
+                  min="1"
+                  max={chit?.duration_months || 12}
+                  placeholder="To"
+                  className="w-20 px-3 py-1.5 rounded-lg bg-white border border-brand-gold/10 text-xs font-bold focus:outline-none focus:border-brand-gold/30"
+                  value={monthRangeEnd}
+                  onChange={(e) => setMonthRangeEnd(e.target.value)}
+                />
+              </div>
+            </div>
+            
+            <div className="ml-auto text-xs text-brand-text/40 font-bold">
+              Showing {filteredMembers.length} of {members.length} members
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="bg-white rounded-[2.5rem] border border-brand-gold/10 shadow-2xl overflow-hidden flex flex-col">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>
               <tr className="bg-[#2B2620]/[0.02]">
                 <th className="sticky left-0 z-20 bg-[#2B2620]/[0.02] px-8 py-6 text-[10px] font-black uppercase tracking-widest text-brand-text/40 border-b border-brand-gold/5">Delegate Participant</th>
-                {months.map(m => (
+                {displayMonths.map(m => (
                   <th key={m} className="px-4 py-6 text-center text-[10px] font-black uppercase tracking-widest text-brand-text/40 border-b border-brand-gold/5 whitespace-nowrap min-w-[80px]">
                     Cycle {m}
                   </th>
@@ -143,7 +292,14 @@ const PaymentGrid = () => {
               </tr>
             </thead>
             <tbody className="divide-y divide-brand-gold/5">
-              {members.map((member) => (
+              {filteredMembers.length === 0 ? (
+                <tr>
+                  <td colSpan={displayMonths.length + 1} className="px-8 py-12 text-center">
+                    <div className="text-brand-text/30 text-sm font-bold">No members match your filters</div>
+                    <button onClick={clearFilters} className="text-brand-gold text-xs font-bold mt-2 hover:underline">Clear filters</button>
+                  </td>
+                </tr>
+              ) : filteredMembers.map((member) => (
                 <tr key={member.id} className="hover:bg-brand-gold/[0.01] transition-colors group">
                   <td className="sticky left-0 z-10 bg-white group-hover:bg-brand-gold/[0.01] px-8 py-4 border-r border-brand-gold/5 shadow-[5px_0_10px_-5px_rgba(0,0,0,0.05)]">
                     <div className="flex items-center gap-4">
@@ -156,7 +312,7 @@ const PaymentGrid = () => {
                        </div>
                     </div>
                   </td>
-                  {months.map(m => {
+                  {displayMonths.map(m => {
                     const cont = contributions.find(c => c.member_id === member.id && c.month_number === m)
                     return (
                       <td key={m} className="px-4 py-4 text-center">

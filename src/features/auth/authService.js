@@ -152,3 +152,147 @@ export const stepTwoVerifyOtp = async (phone, otp, pin) => {
 
   return { session, profile }
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// UPDATE PROFILE — Updates allowed fields for the signed-in user
+// ─────────────────────────────────────────────────────────────────────────────
+export const updateProfile = async (userId, updates) => {
+  // Only allow updating specific fields
+  const allowedFields = ['full_name', 'email', 'address', 'city', 'state', 'pincode']
+  const filteredUpdates = {}
+  
+  Object.keys(updates).forEach(key => {
+    if (allowedFields.includes(key) && updates[key] !== undefined) {
+      filteredUpdates[key] = updates[key]
+    }
+  })
+
+  if (Object.keys(filteredUpdates).length === 0) {
+    throw new Error('No valid fields to update')
+  }
+
+  filteredUpdates.updated_at = new Date().toISOString()
+
+  const { data, error } = await supabase
+    .from('profiles')
+    .update(filteredUpdates)
+    .eq('id', userId)
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Profile update error:', error)
+    throw new Error('Failed to update profile: ' + error.message)
+  }
+
+  // Update local cache
+  const cachedProfile = localStorage.getItem('sn_profile_cache')
+  if (cachedProfile) {
+    const cached = JSON.parse(cachedProfile)
+    localStorage.setItem('sn_profile_cache', JSON.stringify({
+      ...cached,
+      ...filteredUpdates
+    }))
+  }
+
+  return data
+}
+
+/**
+ * CREATE PROFILE — Admin-side participant creation
+ */
+export const createProfile = async (payload) => {
+  const { data, error } = await supabase
+    .from('profiles')
+    .insert([{
+      ...payload,
+      role_type: payload.role_type || 'member',
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }])
+    .select()
+    .single()
+
+  if (error) {
+    console.error('Profile creation error:', error)
+    throw new Error('Failed to create profile: ' + error.message)
+  }
+
+  return data
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// CHANGE PIN — Updates the user's PIN (requires current PIN verification)
+// ─────────────────────────────────────────────────────────────────────────────
+export const changePin = async (userId, currentPin, newPin) => {
+  // First verify current PIN
+  const currentHash = await hashPin(currentPin)
+  
+  const { data: profile, error: fetchError } = await supabase
+    .from('profiles')
+    .select('pin_hash')
+    .eq('id', userId)
+    .single()
+
+  if (fetchError || !profile) {
+    throw new Error('Failed to verify current PIN')
+  }
+
+  if (currentHash !== profile.pin_hash) {
+    throw new Error('Current PIN is incorrect')
+  }
+
+  // Hash and update new PIN
+  const newHash = await hashPin(newPin)
+  
+  const { error: updateError } = await supabase
+    .from('profiles')
+    .update({ pin_hash: newHash, updated_at: new Date().toISOString() })
+    .eq('id', userId)
+
+  if (updateError) {
+    throw new Error('Failed to update PIN: ' + updateError.message)
+  }
+
+  return true
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LOGOUT — Signs out and clears local cache
+// ─────────────────────────────────────────────────────────────────────────────
+export const logout = async () => {
+  // Clear cached profile
+  localStorage.removeItem('sn_profile_cache')
+  
+  // Sign out from Supabase
+  const { error } = await supabase.auth.signOut()
+  
+  if (error) {
+    console.error('Logout error:', error)
+    // Still proceed with local cleanup even if remote logout fails
+  }
+
+  return true
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET CURRENT SESSION — Returns the current auth session if exists
+// ─────────────────────────────────────────────────────────────────────────────
+export const getCurrentSession = async () => {
+  const { data: { session }, error } = await supabase.auth.getSession()
+  
+  if (error) {
+    console.error('Session fetch error:', error)
+    return null
+  }
+
+  return session
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET CACHED PROFILE — Returns locally cached profile for instant access
+// ─────────────────────────────────────────────────────────────────────────────
+export const getCachedProfile = () => {
+  const cached = localStorage.getItem('sn_profile_cache')
+  return cached ? JSON.parse(cached) : null
+}

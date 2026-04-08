@@ -162,11 +162,41 @@ const Reports = () => {
   }, [activeTab, dateRange, selectedScheme, selectedRisk, ledger, members, defaulters])
 
   const exportCSV = () => {
-    if (!reportData.length) return
-    const headers = Object.keys(reportData[0]).join(',')
-    const rows = reportData.map(row => 
-      Object.values(row).map(v => typeof v === 'object' ? JSON.stringify(v) : v).join(',')
+    if (!reportData.length) {
+      toast.error('No data to export')
+      return
+    }
+    
+    // Flatten nested objects for cleaner CSV output
+    const flattenRow = (row) => {
+      const flat = {}
+      Object.entries(row).forEach(([key, value]) => {
+        if (value && typeof value === 'object' && !Array.isArray(value)) {
+          Object.entries(value).forEach(([subKey, subValue]) => {
+            if (subValue && typeof subValue === 'object') {
+              Object.entries(subValue).forEach(([deepKey, deepValue]) => {
+                flat[`${key}_${subKey}_${deepKey}`] = deepValue ?? ''
+              })
+            } else {
+              flat[`${key}_${subKey}`] = subValue ?? ''
+            }
+          })
+        } else {
+          flat[key] = value ?? ''
+        }
+      })
+      return flat
+    }
+
+    const flatData = reportData.map(flattenRow)
+    const headers = Object.keys(flatData[0]).join(',')
+    const rows = flatData.map(row => 
+      Object.values(row).map(v => {
+        const str = String(v ?? '')
+        return str.includes(',') ? `"${str}"` : str
+      }).join(',')
     ).join('\n')
+    
     const csvContent = "data:text/csv;charset=utf-8," + headers + "\n" + rows
     const encodedUri = encodeURI(csvContent)
     const link = document.createElement("a")
@@ -174,6 +204,9 @@ const Reports = () => {
     link.setAttribute("download", `${activeTab}_report_${new Date().toISOString().split('T')[0]}.csv`)
     document.body.appendChild(link)
     link.click()
+    document.body.removeChild(link)
+    
+    toast.success(`${activeTab} report exported successfully`)
   }
 
   const printReport = () => {
@@ -214,10 +247,7 @@ const Reports = () => {
            {tabs.map(tab => (
              <button
                key={tab.id}
-               onClick={() => {
-                 setActiveTab(tab.id);
-                 setReportData([]);
-               }}
+               onClick={() => setActiveTab(tab.id)}
                className={`flex items-center gap-3 px-6 py-3.5 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
                  activeTab === tab.id 
                    ? 'heritage-gradient text-white shadow-lg' 

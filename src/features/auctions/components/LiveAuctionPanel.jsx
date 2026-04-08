@@ -5,6 +5,7 @@ import StatusBadge from '../../../shared/components/ui/StatusBadge'
 import { supabase } from '../../../core/lib/supabase'
 import { toast } from 'react-hot-toast'
 import PremiumDropdown from '../../../shared/components/ui/PremiumDropdown'
+import { auctionService } from '../api'
 
 const LiveAuctionPanel = ({ round, chit, initialBids, loading, onExecute, onCancel }) => {
   const [bids, setBids] = useState(initialBids || [])
@@ -69,6 +70,14 @@ const LiveAuctionPanel = ({ round, chit, initialBids, loading, onExecute, onCanc
   const lowestBid = bids.length > 0 ? Math.min(...bids.map(b => Number(b.bid_amount))) : pool
   const currentLeader = bids.length > 0 ? bids[0] : null
   const eligibleMembers = (chit?.chit_members || []).filter(m => !m.has_won)
+  
+  const isClosed = round.status === 'closed'
+  const winningBid = isClosed ? Number(round.winning_bid_amount || 0) : lowestBid
+  const prize = winningBid
+  const distributable = pool - winningBid
+  const activeNonWinners = (chit?.total_members || 1) - 1
+  const dividend = isClosed ? Number(round.dividend_amount || 0) : (activeNonWinners > 0 ? distributable / activeNonWinners : 0)
+  const commission = Math.max(0, pool - winningBid - distributable)
 
   const handleManualBid = async (e) => {
     e.preventDefault()
@@ -84,12 +93,7 @@ const LiveAuctionPanel = ({ round, chit, initialBids, loading, onExecute, onCanc
 
     try {
       setIsSubmitting(true)
-      const { error } = await supabase.from('bids').insert({
-        auction_round_id: round.id,
-        chit_member_id: manualBid.memberId,
-        bid_amount: bidVal
-      })
-      if (error) throw error
+      await auctionService.placeBid(manualBid.memberId, round.id, bidVal)
       toast.success(`Entry accepted for ${eligibleMembers.find(m => m.id === manualBid.memberId)?.profiles?.full_name}`)
       setManualBid({ memberId: '', amount: '' })
     } catch (err) {
@@ -98,13 +102,6 @@ const LiveAuctionPanel = ({ round, chit, initialBids, loading, onExecute, onCanc
       setIsSubmitting(false)
     }
   }
-
-  const isClosed = round.status === 'closed'
-  const winningBid = isClosed ? Number(round.winning_bid_amount || 0) : lowestBid
-  const prize = winningBid
-  const distributable = pool - winningBid
-  const activeNonWinners = (chit?.total_members || 1) - 1
-  const dividend = isClosed ? Number(round.dividend_amount || 0) : (activeNonWinners > 0 ? distributable / activeNonWinners : 0)
 
   const bidColumns = [
     { 

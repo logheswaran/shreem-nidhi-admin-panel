@@ -13,6 +13,7 @@ import { useApplications, useApplicationActions } from './hooks'
 import { useChits } from '../chits/hooks'
 import ApplicationDetailModal from './components/ApplicationDetailModal'
 import ApplicationFormModal from './components/ApplicationFormModal'
+import { memberService } from '../members/api'
 import toast from 'react-hot-toast'
 
 const Applications = () => {
@@ -28,6 +29,7 @@ const Applications = () => {
   const [selectedApp, setSelectedApp] = useState(null)
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [isCreating, setIsCreating] = useState(false)
 
   // Sync server data with local state for simulation
   useEffect(() => {
@@ -76,7 +78,9 @@ const Applications = () => {
       await approve(id)
       setLocalApps(prev => prev.map(a => a.id === id ? { ...a, status: 'approved', reviewed_at: new Date().toISOString() } : a))
       setIsDetailOpen(false)
-    } catch (e) {}
+    } catch (e) {
+      toast.error(e.message || 'Approval failed')
+    }
   }
 
   const handleReject = async ({ id, reason }) => {
@@ -84,7 +88,9 @@ const Applications = () => {
       await reject({ id, reason })
       setLocalApps(prev => prev.map(a => a.id === id ? { ...a, status: 'rejected', rejection_reason: reason, reviewed_at: new Date().toISOString() } : a))
       setIsDetailOpen(false)
-    } catch (e) {}
+    } catch (e) {
+      toast.error(e.message || 'Rejection failed')
+    }
   }
 
   const handleRequestInfo = async ({ id, message }) => {
@@ -92,12 +98,22 @@ const Applications = () => {
       await requestInfo({ id, message })
       setLocalApps(prev => prev.map(a => a.id === id ? { ...a, status: 'info_requested' } : a))
       setIsDetailOpen(false)
-    } catch (e) {}
+    } catch (e) {
+      toast.error(e.message || 'Request failed')
+    }
   }
 
-  const handleAddMock = (newApp) => {
-    setLocalApps([newApp, ...localApps])
-    toast.success('New institutional applicant added to queue')
+  const handleAddApplication = async (newApp) => {
+    try {
+      setIsCreating(true)
+      const created = await memberService.createApplication(newApp)
+      setLocalApps(prev => [created, ...prev])
+      toast.success('New institutional applicant added to queue')
+    } catch (error) {
+      toast.error(error.message || 'Failed to create application')
+    } finally {
+      setIsCreating(false)
+    }
   }
 
   const columns = [
@@ -305,8 +321,9 @@ const Applications = () => {
       <ApplicationFormModal 
         isOpen={isFormOpen}
         onClose={() => setIsFormOpen(false)}
-        onSubmit={handleAddMock}
+        onSubmit={handleAddApplication}
         chits={chits}
+        submitting={isCreating}
       />
     </div>
   )

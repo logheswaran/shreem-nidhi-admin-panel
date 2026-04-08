@@ -148,14 +148,17 @@ const mapChit = (chit) => {
   if (!chit) return null
   return {
     ...chit,
-    // Database (total_members) -> UI (max_members)
-    max_members: chit.total_members || chit.max_members || chit.members_limit,
-    // Database (monthly_amount) -> UI (monthly_contribution)
-    monthly_contribution: chit.monthly_amount || chit.monthly_contribution,
-    // Database (duration_months) -> UI (total_months)
-    total_months: chit.duration_months || chit.total_months,
+    // Database (total_members | max_members | members_limit) -> UI (max_members)
+    max_members: chit.total_members || chit.max_members || chit.members_limit || chit.totalMembers,
+    // Database (monthly_amount | monthly_contribution) -> UI (monthly_contribution)
+    monthly_contribution: chit.monthly_amount || chit.monthly_contribution || chit.monthlyContribution,
+    // Database (duration_months | total_months) -> UI (total_months)
+    total_months: chit.duration_months || chit.total_months || chit.totalMonths,
     // Ensure membership count is extracted from the join result
-    members_count: chit.members_count || chit.chit_members?.[0]?.count || 0
+    members_count: chit.members_count || chit.chit_members?.[0]?.count || 0,
+    // Add camelCase alias for UI components that might expect them
+    totalMembers: chit.total_members || chit.max_members || chit.members_limit,
+    currentMonth: chit.current_month || 1
   }
 }
 
@@ -165,11 +168,8 @@ export const getChits = async () => {
   const proMode = isPro()
   const demoMode = isDemo()
 
-  console.group('📡 SUPABASE DEBUG: getChits')
-  console.log('Mode:', { proMode, demoMode })
-
   try {
-    const { data, error } = await supabase
+    const { data: dbChits, error } = await supabase
       .from('chits')
       .select(`
         *,
@@ -177,40 +177,42 @@ export const getChits = async () => {
       `)
       .order('created_at', { ascending: false })
 
-    if (error) {
-      console.error('Supabase fetch error:', error)
-      throw error
+    if (error && !demoMode) throw error
+
+    // Load session-stored chits (Demo Mode only)
+    let sessionChits = []
+    if (demoMode && typeof window !== 'undefined') {
+      const stored = localStorage.getItem('sn_demo_chits')
+      sessionChits = stored ? JSON.parse(stored) : []
     }
 
-    console.log('Database Result:', data)
-    console.groupEnd()
+    // Combine Data
+    const combined = [...(dbChits || []), ...sessionChits]
 
-    // IF PRO MODE: Return exact DB state regardless of count
-    if (proMode) {
-      return (data || []).map(mapChit)
-    }
-
-    // IF DB EMPTY & DEMO MODE: Return high-fidelity mocks
-    if ((!data || data.length === 0) && demoMode) {
-      console.warn('⚠️ No database chits found. Injecting mock lifecycle protocols.')
-      return MOCK_CHITS
+    // IF DB EMPTY & DEMO MODE: Return high-fidelity mocks + session chits
+    if (combined.length === 0 && demoMode) {
+      return MOCK_CHITS.map(mapChit)
     }
 
     // Normal mapped results
-    return (data || []).map(mapChit)
+    return combined.map(mapChit)
   } catch (error) {
-    console.error('Supabase Critical Failure:', error)
-    console.groupEnd()
-    if (demoMode && !proMode) return MOCK_CHITS
+    if (demoMode && !proMode) return MOCK_CHITS.map(mapChit)
     throw error
   }
 }
 
 export const getChitById = async (id) => {
-  // Try to find in mocks first if in demo
-  if (isDemo() && !isPro()) {
+  // Check session chits first
+  if (isDemo() && typeof window !== 'undefined') {
+    const stored = localStorage.getItem('sn_demo_chits')
+    const sessionChits = stored ? JSON.parse(stored) : []
+    const match = sessionChits.find(c => c.id === id)
+    if (match) return mapChit(match)
+    
+    // Check mocks
     const mock = MOCK_CHITS.find(c => c.id === id)
-    if (mock) return { ...mock, chit_members: [] }
+    if (mock) return mapChit(mock)
   }
 
   const { data, error } = await supabase
@@ -220,8 +222,6 @@ export const getChitById = async (id) => {
     .single()
   
   if (error) throw error
-  
-  // Normalize columns
   return mapChit(data)
 }
 
@@ -263,14 +263,19 @@ export const createChit = async (chitData) => {
   if (isDemo() && !isPro()) {
     const newChit = {
       ...chitData,
-      id: `C${Math.floor(100 + Math.random() * 900)}`,
+      id: `DEMO-${Math.floor(1000 + Math.random() * 9000)}`,
       status: 'forming',
       current_month: 0,
       members_count: 0,
       created_at: new Date().toISOString()
     }
-    // We don't persist mocks between sessions globally, 
-    // but React Query will show it until refresh.
+    
+    // Persist to session storage so it reflects in the list
+    const stored = localStorage.getItem('sn_demo_chits')
+    const sessionChits = stored ? JSON.parse(stored) : []
+    sessionChits.push(newChit)
+    localStorage.setItem('sn_demo_chits', JSON.stringify(sessionChits))
+    
     return newChit
   }
 

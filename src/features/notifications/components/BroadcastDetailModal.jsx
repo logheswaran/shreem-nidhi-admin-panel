@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { 
   X, Send, RefreshCw, Copy, 
   MessageSquare, Users, CheckCircle2, 
@@ -18,6 +18,7 @@ const BroadcastDetailModal = ({
   onDuplicate 
 }) => {
   if (!broadcast) return null
+  const [pendingAction, setPendingAction] = useState(null)
 
   const stats = [
     { label: 'Total Recipients', value: broadcast.total_recipients || 120, icon: Users, color: 'text-[#2B2620]' },

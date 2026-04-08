@@ -1,14 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { auctionService } from './api'
+import { auctionService, cancelAuction as cancelAuctionRpc } from './api'
 import toast from 'react-hot-toast'
 
 /**
  * Hook for fetching auction rounds for a specific chit.
  */
-export const useAuctionRounds = (chitId) => {
+export const useAuctionRounds = (chitId, page = 0, pageSize = 50) => {
   return useQuery({
-    queryKey: ['auction_rounds', chitId],
-    queryFn: () => auctionService.getAuctionRounds(chitId),
+    queryKey: ['auction_rounds', chitId, page, pageSize],
+    queryFn: () => auctionService.getAuctionRounds(chitId, { page, pageSize }),
     enabled: !!chitId,
     staleTime: 1000 * 30, // 30 seconds freshness for live auctions
     cacheTime: 1000 * 60 * 5,
@@ -48,6 +48,19 @@ export const useAuctionActions = () => {
     }
   })
 
+  const cancelMutation = useMutation({
+    mutationFn: (roundId) => cancelAuctionRpc(roundId),
+    onSuccess: (_, roundId) => {
+      queryClient.invalidateQueries({ queryKey: ['auction_rounds'] })
+      queryClient.invalidateQueries({ queryKey: ['bids', roundId] })
+      queryClient.invalidateQueries({ queryKey: ['dashboard_stats'] })
+      toast.success('Auction cancelled.')
+    },
+    onError: (err) => {
+      toast.error(err.message || 'Failed to cancel auction')
+    }
+  })
+
   const openMutation = useMutation({
     mutationFn: ({ chitId, month }) => auctionService.openAuction(chitId, month),
     onSuccess: (_, { chitId }) => {
@@ -62,6 +75,7 @@ export const useAuctionActions = () => {
   return {
     closeAuction: closeMutation.mutateAsync,
     openAuction: openMutation.mutateAsync,
-    isProcessing: closeMutation.isLoading || openMutation.isLoading
+    cancelAuction: cancelMutation.mutateAsync,
+    isProcessing: closeMutation.isLoading || openMutation.isLoading || cancelMutation.isLoading
   }
 }

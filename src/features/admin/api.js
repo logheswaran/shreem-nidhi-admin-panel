@@ -1,11 +1,70 @@
 import { supabase } from '../../core/lib/supabase'
 
 export const adminService = {
-  // ROLE MANAGEMENT
+  // ─── SYSTEM SETTINGS ────────────────────────────────────
+  async getSystemSettings() {
+    const defaults = {
+      penaltyRate: 2.5,
+      interestRate: 15.0,
+      auctionBuffer: 5,
+      autoAlerts: true
+    }
+
+    const { data, error } = await supabase
+      .from('system_config')
+      .select('config_key, config_value')
+
+    if (error) throw error
+
+    const settings = { ...defaults }
+
+    for (const row of data || []) {
+      if (row.config_key in settings) {
+        const rawValue = row.config_value
+        settings[row.config_key] = typeof defaults[row.config_key] === 'boolean'
+          ? rawValue === true || rawValue === 'true'
+          : Number(rawValue)
+      }
+    }
+
+    return settings
+  },
+
+  async saveSystemSettings(settings) {
+    const rows = Object.entries(settings).map(([configKey, configValue]) => ({
+      config_key: configKey,
+      config_value: configValue
+    }))
+
+    const { data, error } = await supabase
+      .from('system_config')
+      .upsert(rows, { onConflict: 'config_key' })
+      .select()
+
+    if (error) throw error
+    return data || []
+  },
+
+  // ─── ROLE MANAGEMENT ────────────────────────────────────
   async getProfiles() {
     const { data, error } = await supabase
       .from('profiles')
       .select('*')
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data || []
+  },
+
+  /**
+   * Get members only (excludes admins).
+   * Use this for the Overrides tab instead of getProfiles().
+   * FIX: Bug #3 — getProfiles() was returning admins in the overrides member list.
+   */
+  async getMembers() {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('role_type', 'member')
       .order('created_at', { ascending: false })
     if (error) throw error
     return data || []
@@ -21,17 +80,24 @@ export const adminService = {
     return data
   },
 
-  // AUDIT LOGS
-  async getAuditLogs() {
+  // ─── AUDIT LOGS ─────────────────────────────────────────
+  /**
+   * Paginated audit logs.
+   * @param {Object} options
+   * @param {number} options.page - Zero-indexed page number
+   * @param {number} options.pageSize - Records per page
+   */
+  async getAuditLogs({ page = 0, pageSize = 50 } = {}) {
     const { data, error } = await supabase
       .from('audit_logs')
       .select('*, profiles(full_name)')
       .order('created_at', { ascending: false })
+      .range(page * pageSize, (page + 1) * pageSize - 1)
     if (error) throw error
     return data || []
   },
 
-  // KYC QUEUE
+  // ─── KYC QUEUE ──────────────────────────────────────────
   async getPendingKYC() {
     const { data, error } = await supabase
       .from('kyc_details')
@@ -42,7 +108,11 @@ export const adminService = {
     return data || []
   },
 
-  async verifyKYC(kycId, userId) {
+  /**
+   * Verify a KYC record.
+   * FIX: Bug #5 — removed unused `userId` param that was never used in the query.
+   */
+  async verifyKYC(kycId) {
     const { data, error } = await supabase
       .from('kyc_details')
       .update({ 
@@ -67,12 +137,31 @@ export const adminService = {
     return data
   },
 
-  // OVERRIDES
-  async deleteAuctionRound(id) {
-    const { error } = await supabase
-      .from('auction_rounds')
-      .update({ status: 'closed' }) // Cancellation is usually closing without winner
-      .eq('id', id)
+  // ─── OVERRIDES ──────────────────────────────────────────
+
+  /**
+   * Get contribution-type ledger entries with server-side filtering.
+   * FIX: Bug #4 — previously fetched the ENTIRE ledger and filtered client-side.
+   * Now filters server-side with a limit to prevent scaling issues.
+   */
+  async getContributionLedger() {
+    const { data, error } = await supabase
+      .from('ledger')
+      .select('*, profiles(full_name)')
+      .eq('reference_type', 'contribution')
+      .order('created_at', { ascending: false })
+      .limit(100)
+    if (error) throw error
+    return data || []
+  },
+
+  /**
+   * Cancel an auction round using the existing RPC.
+   * FIX: Bug #6 — `deleteAuctionRound` was setting status to 'closed' via direct update
+   * instead of using the `admin_cancel_auction` RPC which properly handles the cascade.
+   */
+  async cancelAuctionRound(id) {
+    const { error } = await supabase.rpc('admin_cancel_auction', { p_auction_id: id })
     if (error) throw error
   },
 

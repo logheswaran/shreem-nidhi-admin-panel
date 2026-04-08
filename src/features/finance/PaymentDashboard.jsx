@@ -22,7 +22,6 @@ import {
 } from 'lucide-react'
 import GlobalModal from '../../shared/components/ui/GlobalModal'
 import { financeService } from './api'
-import { supabase } from '../../core/lib/supabase'
 import toast from 'react-hot-toast'
 import { motion, AnimatePresence } from 'framer-motion'
 
@@ -76,43 +75,9 @@ const PaymentDashboard = () => {
     setLoadingMembers(true)
     
     try {
-      // Fetch members with their payment status for current month
-      const { data: contributions } = await supabase
-        .from('contributions')
-        .select(`
-          *,
-          chit_members (
-            id,
-            user_id,
-            profiles (full_name, mobile_number)
-          )
-        `)
-        .eq('chit_id', chit.id)
-        .order('due_date', { ascending: false })
-      
-      const today = new Date().toISOString().split('T')[0]
-      
-      // Group by member and get latest contribution
-      const memberMap = {}
-      contributions?.forEach(c => {
-        const memberId = c.member_id
-        if (!memberMap[memberId] || c.month_number > memberMap[memberId].month_number) {
-          memberMap[memberId] = {
-            id: memberId,
-            name: c.chit_members?.profiles?.full_name || 'Unknown',
-            phone: c.chit_members?.profiles?.mobile_number || '',
-            amountDue: c.amount_due,
-            amountPaid: c.amount_paid,
-            status: c.payment_status === 'paid' ? 'PAID' : c.due_date < today ? 'OVERDUE' : 'PENDING',
-            dueDate: c.due_date,
-            paidAt: c.paid_at,
-            monthNumber: c.month_number,
-            contributionId: c.id
-          }
-        }
-      })
-      
-      setSchemeMembers(Object.values(memberMap))
+      // Fetch members with their payment status using service method
+      const members = await financeService.getSchemeMembers(chit.id)
+      setSchemeMembers(members)
     } catch (error) {
       toast.error('Failed to load member details')
       setSchemeMembers([])
@@ -224,7 +189,7 @@ const PaymentDashboard = () => {
       <div>
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-brand-text/60 mb-1">{title}</p>
         <div className="flex items-baseline gap-2">
-          <span className="text-2xl font-headline font-bold text-[#2B2620]">₹{Number(value).toLocaleString('en-IN')}</span>
+          <span className="text-2xl font-headline font-bold text-[#2B2620]">₹{Number(value || 0).toLocaleString('en-IN')}</span>
         </div>
         {subtitle && <p className="text-[10px] text-brand-text/30 font-medium">{subtitle}</p>}
       </div>

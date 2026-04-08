@@ -189,9 +189,18 @@ export const memberService = {
    */
   async getApplications() {
     try {
+      // 🕵️ DEBUG: Log query attempt for Pro Mode
+      console.log('📡 FETCHING: member_applications (Pro Mode)')
+
       const { data, error } = await supabase
         .from('member_applications')
-        .select('*, profiles:user_id(*), chits:chit_id(*)')
+        .select(`
+          *,
+          profiles:user_id(full_name, mobile_number, email),
+          chits:chit_id(name, monthly_amount, total_value)
+        `)
+        // Filter for pending by default as requested
+        .eq('status', 'pending')
         .order('applied_at', { ascending: false })
       
       if (error) {
@@ -199,12 +208,52 @@ export const memberService = {
         throw error
       }
 
-      console.log('✅ SUPABASE DATA (Applications):', data)
+      // 🕵️ DEBUG: Log raw count
+      console.log(`✅ SUCCESS: Found ${data?.length || 0} pending applications.`)
+      
       return data || []
     } catch (e) {
       console.error('❌ Critical Applications Fetch Failure:', e)
       throw e
     }
+  },
+
+  /**
+   * Create a new member application.
+   */
+  async createApplication(payload) {
+    const { data, error } = await supabase
+      .from('member_applications')
+      .insert([{
+        user_id: payload.user_id || null,
+        chit_id: payload.chit_id,
+        status: payload.status || 'pending',
+        kyc_status: payload.kyc_status || 'pending',
+        monthly_income: payload.monthly_income,
+        applied_at: payload.applied_at || new Date().toISOString(),
+        rejection_reason: payload.rejection_reason || null,
+        info_request_message: payload.info_request_message || null
+      }])
+      .select('*, profiles:user_id(*), chits:chit_id(*)')
+      .single()
+
+    if (error) throw error
+    return data
+  },
+
+  /**
+   * Update application details
+   */
+  async updateApplication(id, updates) {
+    const { data, error } = await supabase
+      .from('member_applications')
+      .update(updates)
+      .eq('id', id)
+      .select('*, profiles:user_id(*), chits:chit_id(*)')
+      .single()
+    
+    if (error) throw error
+    return data
   },
 
   /**
@@ -300,13 +349,52 @@ export const memberService = {
    * Create new member
    */
   async createMember(payload) {
-    const { data, error } = await supabase
-      .from('chit_members')
-      .insert([payload])
-      .select('*, profiles:user_id(*), chits:chit_id(*)')
-      .single()
-    if (error) throw error
-    return data
+    try {
+      // 1. Ensure Profile exists (Match by mobile_number)
+      // This handles both new users and existing users being enrolled in a new chit.
+      const { data: profile, error: profileError } = await supabase
+        .from('profiles')
+        .upsert([{
+          full_name: payload.full_name,
+          mobile_number: payload.mobile_number,
+          email: payload.email,
+          role_type: 'member',
+          updated_at: new Date().toISOString()
+        }], { 
+          onConflict: 'mobile_number',
+          ignoreDuplicates: false 
+        })
+        .select()
+        .single()
+
+      if (profileError) {
+        console.error('📡 Profile Sync Error:', profileError)
+        throw new Error(`Profile sync failed: ${profileError.message}`)
+      }
+
+      // 2. Link member to Chit Group
+      const { data: member, error: memberError } = await supabase
+        .from('chit_members')
+        .insert([{
+          user_id: profile.id,
+          chit_id: payload.chit_id,
+          status: payload.status || 'active',
+          joined_at: new Date().toISOString()
+        }])
+        .select('*, profiles:user_id(*), chits:chit_id(*)')
+        .single()
+
+      if (memberError) {
+        console.error('📡 Enrollment Error:', memberError)
+        throw new Error(`Chit enrollment failed: ${memberError.message}`)
+      }
+
+      console.log('✅ Member Enrolled Successfully:', member)
+      return member
+    } catch (e) {
+      console.error('❌ Critical Enrollment Failure:', e)
+      throw e
+    }
   },
 
   /**

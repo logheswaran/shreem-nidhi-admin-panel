@@ -1,11 +1,29 @@
-import React from 'react'
-import { User, Shield, Key, LogOut, Mail, Phone, Calendar, Landmark, Settings, Bell, Fingerprint } from 'lucide-react'
+import React, { useState } from 'react'
+import { User, Shield, Key, LogOut, Mail, Phone, Calendar, Landmark, Settings, Bell, Fingerprint, Edit2, Save, X, Check } from 'lucide-react'
 import { useAuth } from '../../core/providers/AuthProvider'
+import { updateProfile, changePin } from './authService'
 import toast from 'react-hot-toast'
 
 const Profile = () => {
-  const { user, logout: signOut } = useAuth()
+  const { user, logout: signOut, refreshProfile } = useAuth()
   const profile = user // Map for compatibility
+  
+  // Edit state
+  const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState({
+    full_name: profile?.full_name || '',
+    email: profile?.email || '',
+    address: profile?.address || '',
+    city: profile?.city || '',
+    state: profile?.state || '',
+    pincode: profile?.pincode || ''
+  })
+  const [saving, setSaving] = useState(false)
+  
+  // PIN change state
+  const [showPinChange, setShowPinChange] = useState(false)
+  const [pinForm, setPinForm] = useState({ current: '', new: '', confirm: '' })
+  const [changingPin, setChangingPin] = useState(false)
 
   const handleLogout = async () => {
     try {
@@ -13,6 +31,72 @@ const Profile = () => {
       toast.success('Session terminated. Secure exit complete.')
     } catch (error) {
       toast.error('Sign out failed')
+    }
+  }
+
+  const startEditing = () => {
+    setEditForm({
+      full_name: profile?.full_name || '',
+      email: profile?.email || '',
+      address: profile?.address || '',
+      city: profile?.city || '',
+      state: profile?.state || '',
+      pincode: profile?.pincode || ''
+    })
+    setIsEditing(true)
+  }
+
+  const cancelEditing = () => {
+    setIsEditing(false)
+    setEditForm({
+      full_name: profile?.full_name || '',
+      email: profile?.email || '',
+      address: profile?.address || '',
+      city: profile?.city || '',
+      state: profile?.state || '',
+      pincode: profile?.pincode || ''
+    })
+  }
+
+  const handleSaveProfile = async () => {
+    if (!profile?.id) {
+      toast.error('No profile to update')
+      return
+    }
+
+    setSaving(true)
+    try {
+      await updateProfile(profile.id, editForm)
+      toast.success('Profile updated successfully')
+      setIsEditing(false)
+      if (refreshProfile) refreshProfile()
+    } catch (error) {
+      toast.error(error.message || 'Failed to update profile')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  const handleChangePin = async () => {
+    if (pinForm.new !== pinForm.confirm) {
+      toast.error('New PINs do not match')
+      return
+    }
+    if (pinForm.new.length < 4) {
+      toast.error('PIN must be at least 4 digits')
+      return
+    }
+
+    setChangingPin(true)
+    try {
+      await changePin(profile.id, pinForm.current, pinForm.new)
+      toast.success('PIN changed successfully')
+      setShowPinChange(false)
+      setPinForm({ current: '', new: '', confirm: '' })
+    } catch (error) {
+      toast.error(error.message || 'Failed to change PIN')
+    } finally {
+      setChangingPin(false)
     }
   }
 
@@ -99,6 +183,130 @@ const Profile = () => {
 
         {/* Settings Area */}
         <div className="lg:col-span-2 space-y-8">
+           {/* Editable Profile Section */}
+           <div className="bg-white p-12 rounded-[3.5rem] border border-brand-gold/10 shadow-sm space-y-8">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                   <div className="w-12 h-12 rounded-2xl bg-brand-gold/5 flex items-center justify-center"><User className="w-6 h-6 text-brand-gold" /></div>
+                   <h3 className="text-2xl font-headline font-bold text-[#2B2620]">Profile Information</h3>
+                </div>
+                {!isEditing ? (
+                  <button
+                    onClick={startEditing}
+                    className="flex items-center gap-2 px-5 py-2.5 rounded-full bg-brand-gold/10 text-brand-gold text-xs font-bold hover:bg-brand-gold hover:text-white transition-all"
+                  >
+                    <Edit2 className="w-4 h-4" /> Edit Profile
+                  </button>
+                ) : (
+                  <div className="flex gap-2">
+                    <button
+                      onClick={cancelEditing}
+                      disabled={saving}
+                      className="flex items-center gap-2 px-4 py-2 rounded-full border border-brand-gold/20 text-brand-text/60 text-xs font-bold hover:bg-gray-50 transition-all disabled:opacity-50"
+                    >
+                      <X className="w-4 h-4" /> Cancel
+                    </button>
+                    <button
+                      onClick={handleSaveProfile}
+                      disabled={saving}
+                      className="flex items-center gap-2 px-5 py-2 rounded-full bg-green-600 text-white text-xs font-bold hover:bg-green-700 transition-all disabled:opacity-50"
+                    >
+                      {saving ? (
+                        <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                      ) : (
+                        <><Save className="w-4 h-4" /> Save Changes</>
+                      )}
+                    </button>
+                  </div>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">Full Name</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-brand-ivory rounded-xl border border-brand-gold/10 text-sm font-bold focus:outline-none focus:border-brand-gold/30"
+                      value={editForm.full_name}
+                      onChange={(e) => setEditForm({ ...editForm, full_name: e.target.value })}
+                    />
+                  ) : (
+                    <p className="text-sm font-bold text-[#2B2620]">{profile?.full_name || 'Not set'}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">Email Address</label>
+                  {isEditing ? (
+                    <input
+                      type="email"
+                      className="w-full px-4 py-3 bg-brand-ivory rounded-xl border border-brand-gold/10 text-sm font-bold focus:outline-none focus:border-brand-gold/30"
+                      value={editForm.email}
+                      onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    />
+                  ) : (
+                    <p className="text-sm font-bold text-[#2B2620]">{profile?.email || 'Not set'}</p>
+                  )}
+                </div>
+                <div className="md:col-span-2">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">Address</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-brand-ivory rounded-xl border border-brand-gold/10 text-sm font-bold focus:outline-none focus:border-brand-gold/30"
+                      value={editForm.address}
+                      onChange={(e) => setEditForm({ ...editForm, address: e.target.value })}
+                    />
+                  ) : (
+                    <p className="text-sm font-bold text-[#2B2620]">{profile?.address || 'Not set'}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">City</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-brand-ivory rounded-xl border border-brand-gold/10 text-sm font-bold focus:outline-none focus:border-brand-gold/30"
+                      value={editForm.city}
+                      onChange={(e) => setEditForm({ ...editForm, city: e.target.value })}
+                    />
+                  ) : (
+                    <p className="text-sm font-bold text-[#2B2620]">{profile?.city || 'Not set'}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">State</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-brand-ivory rounded-xl border border-brand-gold/10 text-sm font-bold focus:outline-none focus:border-brand-gold/30"
+                      value={editForm.state}
+                      onChange={(e) => setEditForm({ ...editForm, state: e.target.value })}
+                    />
+                  ) : (
+                    <p className="text-sm font-bold text-[#2B2620]">{profile?.state || 'Not set'}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">Pincode</label>
+                  {isEditing ? (
+                    <input
+                      type="text"
+                      className="w-full px-4 py-3 bg-brand-ivory rounded-xl border border-brand-gold/10 text-sm font-bold focus:outline-none focus:border-brand-gold/30"
+                      value={editForm.pincode}
+                      onChange={(e) => setEditForm({ ...editForm, pincode: e.target.value })}
+                    />
+                  ) : (
+                    <p className="text-sm font-bold text-[#2B2620]">{profile?.pincode || 'Not set'}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">Phone Number</label>
+                  <p className="text-sm font-bold text-[#2B2620]/50 italic">{profile?.mobile_number || profile?.phone_number || 'Not set'} (Read-only)</p>
+                </div>
+              </div>
+           </div>
+
            <div className="bg-white p-12 rounded-[3.5rem] border border-brand-gold/10 shadow-sm space-y-12">
               <section>
                  <div className="flex items-center gap-4 mb-8">
@@ -135,16 +343,74 @@ const Profile = () => {
                  </div>
                  
                  <div className="space-y-6">
-                    <button className="w-full flex items-center justify-between p-6 bg-brand-ivory rounded-3xl border border-brand-gold/10 hover:border-brand-gold transition-all group">
-                       <div className="flex items-center gap-5">
-                          <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm"><Fingerprint className="w-6 h-6 text-brand-gold/40" /></div>
-                          <div className="text-left">
-                             <p className="text-sm font-bold text-[#2B2620]">Update Cryptographic Password</p>
-                             <p className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest mt-1">Last rotated 45 days ago</p>
+                    {!showPinChange ? (
+                      <button 
+                        onClick={() => setShowPinChange(true)}
+                        className="w-full flex items-center justify-between p-6 bg-brand-ivory rounded-3xl border border-brand-gold/10 hover:border-brand-gold transition-all group"
+                      >
+                        <div className="flex items-center gap-5">
+                           <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center shadow-sm"><Fingerprint className="w-6 h-6 text-brand-gold/40" /></div>
+                           <div className="text-left">
+                              <p className="text-sm font-bold text-[#2B2620]">Change PIN</p>
+                              <p className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest mt-1">Update your secure access PIN</p>
+                           </div>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-brand-gold/40 group-hover:translate-x-1 transition-transform" />
+                      </button>
+                    ) : (
+                      <div className="p-6 bg-brand-ivory rounded-3xl border border-brand-gold/10 space-y-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center gap-3">
+                            <Fingerprint className="w-5 h-5 text-brand-gold" />
+                            <span className="font-bold text-[#2B2620]">Change PIN</span>
                           </div>
-                       </div>
-                       <ChevronRight className="w-5 h-5 text-brand-gold/40 group-hover:translate-x-1 transition-transform" />
-                    </button>
+                          <button onClick={() => setShowPinChange(false)} className="text-brand-text/30 hover:text-brand-text">
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">Current PIN</label>
+                          <input
+                            type="password"
+                            className="w-full px-4 py-3 bg-white rounded-xl border border-brand-gold/10 text-sm font-bold focus:outline-none focus:border-brand-gold/30"
+                            value={pinForm.current}
+                            onChange={(e) => setPinForm({ ...pinForm, current: e.target.value })}
+                            maxLength={6}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">New PIN</label>
+                          <input
+                            type="password"
+                            className="w-full px-4 py-3 bg-white rounded-xl border border-brand-gold/10 text-sm font-bold focus:outline-none focus:border-brand-gold/30"
+                            value={pinForm.new}
+                            onChange={(e) => setPinForm({ ...pinForm, new: e.target.value })}
+                            maxLength={6}
+                          />
+                        </div>
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-brand-text/40 block mb-2">Confirm New PIN</label>
+                          <input
+                            type="password"
+                            className="w-full px-4 py-3 bg-white rounded-xl border border-brand-gold/10 text-sm font-bold focus:outline-none focus:border-brand-gold/30"
+                            value={pinForm.confirm}
+                            onChange={(e) => setPinForm({ ...pinForm, confirm: e.target.value })}
+                            maxLength={6}
+                          />
+                        </div>
+                        <button
+                          onClick={handleChangePin}
+                          disabled={changingPin || !pinForm.current || !pinForm.new || !pinForm.confirm}
+                          className="w-full py-3 rounded-xl bg-brand-gold text-white text-xs font-black uppercase tracking-widest hover:bg-brand-goldDark transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                        >
+                          {changingPin ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                          ) : (
+                            <><Check className="w-4 h-4" /> Update PIN</>
+                          )}
+                        </button>
+                      </div>
+                    )}
                     
                     <button className="w-full flex items-center justify-between p-6 bg-brand-ivory rounded-3xl border border-brand-gold/10 hover:border-brand-gold transition-all group">
                        <div className="flex items-center gap-5">

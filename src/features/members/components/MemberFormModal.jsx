@@ -58,10 +58,31 @@ const MemberFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loadin
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    if (!formData.full_name || !formData.mobile_number) {
-      toast.error('Name and Phone are required')
+    
+    // Strict Validation Protocol
+    const phoneRegex = /^\d{10}$/
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+    if (!formData.full_name) {
+      toast.error('Identity name is required')
       return
     }
+
+    if (!phoneRegex.test(formData.mobile_number)) {
+      toast.error('Contact must be exactly 10 digits')
+      return
+    }
+
+    if (formData.email && !emailRegex.test(formData.email)) {
+      toast.error('Invalid institutional email format')
+      return
+    }
+
+    if (!formData.chit_id) {
+      toast.error('Please assign to a Heritage Portfolio')
+      return
+    }
+
     onSubmit(formData)
   }
 
@@ -97,9 +118,13 @@ const MemberFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loadin
               <input
                 name="mobile_number"
                 type="tel"
+                maxLength={10}
                 value={formData.mobile_number}
-                onChange={handleChange}
-                placeholder="+91 98765 43210"
+                onChange={(e) => {
+                  const val = e.target.value.replace(/\D/g, '').slice(0, 10)
+                  setFormData(prev => ({ ...prev, mobile_number: val }))
+                }}
+                placeholder="10-digit mobile number"
                 className="w-full bg-brand-ivory/50 border-2 border-brand-gold/5 focus:border-brand-gold/30 rounded-2xl py-3.5 pl-12 pr-4 text-sm font-body focus:outline-none transition-all placeholder:text-brand-text/20"
                 required
               />
@@ -122,7 +147,6 @@ const MemberFormModal = ({ isOpen, onClose, onSubmit, initialData = null, loadin
             </div>
           </div>
 
-// ... at around line 125
           <PremiumDropdown 
             label="Heritage Portfolio"
             placeholder={fetchingChits ? "Loading portfolios..." : "Unassigned"}
