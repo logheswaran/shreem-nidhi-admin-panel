@@ -1,132 +1,5 @@
 import { supabase } from '../../core/lib/supabase'
 
-const MOCK_MEMBERS = [
-  {
-    id: 'mock-1',
-    user_id: 'u1',
-    chit_id: 'C001',
-    status: 'active',
-    total_contribution: 4000,
-    months_paid: 4,
-    profiles: { full_name: 'Rajesh Sharma', mobile_number: '+919876543210', email: 'rajesh@sreemnidhi.com' },
-    chits: { name: 'SreeNidhi 250 (Pioneer)', monthly_amount: 25000 },
-    joined_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30 * 4).toISOString()
-  },
-  {
-    id: 'mock-2',
-    user_id: 'u2',
-    chit_id: 'C002',
-    status: 'active',
-    total_contribution: 8000,
-    months_paid: 4,
-    profiles: { full_name: 'Priya Iyer', mobile_number: '+919876543211', email: 'priya@sreemnidhi.com' },
-    chits: { name: 'Golden Harvest (Auction)', monthly_amount: 10000 },
-    joined_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30 * 4).toISOString()
-  },
-  {
-    id: 'mock-3',
-    user_id: 'u3',
-    chit_id: 'C001',
-    status: 'active',
-    total_contribution: 4000,
-    months_paid: 4,
-    profiles: { full_name: 'Amit Varma', mobile_number: '+919876543212', email: 'amit@sreemnidhi.com' },
-    chits: { name: 'SreeNidhi 250 (Pioneer)', monthly_amount: 25000 },
-    joined_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30 * 4).toISOString()
-  },
-  {
-    id: 'mock-4',
-    user_id: 'u4',
-    chit_id: 'C002',
-    status: 'active',
-    total_contribution: 8000,
-    months_paid: 4,
-    profiles: { full_name: 'Sneha Reddy', mobile_number: '+919876543213', email: 'sneha@sreemnidhi.com' },
-    chits: { name: 'Golden Harvest (Auction)', monthly_amount: 10000 },
-    joined_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30 * 4).toISOString()
-  },
-  {
-    id: 'mock-5',
-    user_id: 'u5',
-    chit_id: 'C001',
-    status: 'active',
-    total_contribution: 4000,
-    months_paid: 4,
-    profiles: { full_name: 'Vikram Singh', mobile_number: '+919876543214', email: 'vikram@sreemnidhi.com' },
-    chits: { name: 'SreeNidhi 250 (Pioneer)', monthly_amount: 25000 },
-    joined_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 30 * 4).toISOString()
-  },
-  {
-    id: 'mock-6',
-    user_id: 'u6',
-    chit_id: 'C003',
-    status: 'active',
-    total_contribution: 1000,
-    months_paid: 1,
-    profiles: { full_name: 'Admin Member', mobile_number: '+919025169190', email: 'admin@sreemnidhi.com' },
-    chits: { name: 'Shreem Nidhi Special (Random)', monthly_amount: 50000 },
-    joined_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7).toISOString()
-  }
-]
-
-const MOCK_APPLICATIONS = [
-  {
-    id: "APP-001",
-    user_id: "u101",
-    chit_id: "C001",
-    status: "pending",
-    kyc_status: "verified",
-    applied_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString(),
-    monthly_income: 45000,
-    profiles: { 
-      full_name: "Karthik Raja", 
-      mobile_number: "+91 98401 23456", 
-      email: "karthik@example.com",
-      address: "No. 12, Gandhi St, Chennai"
-    },
-    chits: { 
-      name: "SreeNidhi 250 (Pioneer)", 
-      monthly_amount: 25000,
-      total_value: 5000000
-    },
-    risk: { level: "LOW", reason: "Income significantly higher than monthly commitment." },
-    documents: [
-      { type: "ID Proof", name: "Aadhaar Card", status: "verified", url: "https://example.com/id.jpg" },
-      { type: "Address Proof", name: "Utility Bill", status: "verified", url: "https://example.com/addr.jpg" }
-    ],
-    audit_log: [
-      { action: "Submission", user: "Karthik Raja", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 24 * 2).toISOString() }
-    ]
-  },
-  {
-    id: "APP-002",
-    user_id: "u102",
-    chit_id: "C002",
-    status: "pending",
-    kyc_status: "pending",
-    applied_at: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString(),
-    monthly_income: 18000,
-    profiles: { 
-      full_name: "Meena Kumari", 
-      mobile_number: "+91 98401 55667", 
-      email: "meena@example.com",
-      address: "Flat 4B, Heritage Apts, Madurai"
-    },
-    chits: { 
-      name: "Golden Harvest (Auction)", 
-      monthly_amount: 10000,
-      total_value: 500000
-    },
-    risk: { level: "HIGH", reason: "Monthly commitment exceeds 50% of declared income." },
-    documents: [
-      { type: "ID Proof", name: "PAN Card", status: "pending", url: "https://example.com/pan.jpg" },
-      { type: "Address Proof", name: "Voter ID", status: "pending", url: "https://example.com/voter.jpg" }
-    ],
-    audit_log: [
-      { action: "Submission", user: "Meena Kumari", timestamp: new Date(Date.now() - 1000 * 60 * 60 * 12).toISOString() }
-    ]
-  }
-]
 
 export const memberService = {
   /**
@@ -189,9 +62,14 @@ export const memberService = {
    */
   async getApplications() {
     try {
+      console.log('📡 Fetching applications from Supabase...')
       const { data, error } = await supabase
         .from('member_applications')
-        .select('*, profiles:user_id(*), chits:chit_id(*)')
+        .select(`
+          *,
+          profiles:user_id(*),
+          chits:chit_id(*)
+        `)
         .order('applied_at', { ascending: false })
       
       if (error) {
@@ -199,8 +77,16 @@ export const memberService = {
         throw error
       }
 
-      console.log('✅ SUPABASE DATA (Applications):', data)
-      return data || []
+      console.log('✅ SUPABASE DATA (Applications Raw):', data?.length, 'rows found')
+      // Map database columns to UI-expected object structure
+      return (data || []).map(app => ({
+        ...app,
+        risk: { 
+          level: app.risk_level || 'LOW', 
+          reason: app.risk_reason || 'Verified baseline' 
+        },
+        kyc_status: app.kyc_status || 'verified'
+      }))
     } catch (e) {
       console.error('❌ Critical Applications Fetch Failure:', e)
       throw e
@@ -275,14 +161,38 @@ export const memberService = {
    * Update member details
    */
   async updateMember(id, updates) {
-    const { data, error } = await supabase
-      .from('chit_members')
-      .update(updates)
-      .eq('id', id)
-      .select('*, profiles:user_id(*), chits:chit_id(*)')
-      .single()
-    if (error) throw error
-    return data
+    try {
+      const { full_name, mobile_number, email, status, chit_id } = updates
+      
+      // 1. Get user_id first
+      const { data: memberData } = await supabase
+        .from('chit_members')
+        .select('user_id')
+        .eq('id', id)
+        .single()
+
+      if (memberData?.user_id) {
+        // 2. Update Profile
+        await supabase
+          .from('profiles')
+          .update({ full_name, mobile_number, email })
+          .eq('id', memberData.user_id)
+      }
+
+      // 3. Update Membership
+      const { data, error } = await supabase
+        .from('chit_members')
+        .update({ status, chit_id })
+        .eq('id', id)
+        .select('*, profiles:user_id(*), chits:chit_id(*)')
+        .single()
+      
+      if (error) throw error
+      return data
+    } catch (e) {
+      console.error('❌ Update Failure:', e)
+      throw e
+    }
   },
 
   /**
@@ -300,13 +210,53 @@ export const memberService = {
    * Create new member
    */
   async createMember(payload) {
-    const { data, error } = await supabase
-      .from('chit_members')
-      .insert([payload])
-      .select('*, profiles:user_id(*), chits:chit_id(*)')
-      .single()
-    if (error) throw error
-    return data
+    try {
+      const { full_name, mobile_number, email, chit_id, status } = payload
+
+      // 1. Ensure Profile exists (or create one)
+      let { data: profile, error: profileFetchError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('mobile_number', mobile_number)
+        .maybeSingle()
+
+      if (!profile) {
+        const { data: newProfile, error: profileCreateError } = await supabase
+          .from('profiles')
+          .insert([{ 
+            full_name, 
+            mobile_number, 
+            email,
+            role_type: 'member'
+          }])
+          .select()
+          .single()
+        
+        if (profileCreateError) throw profileCreateError
+        profile = newProfile
+      }
+
+      // 2. Link to Chit Scheme
+      const { data: membership, error: memberError } = await supabase
+        .from('chit_members')
+        .insert([{
+          chit_id,
+          user_id: profile.id,
+          status: status || 'active'
+        }])
+        .select('*, profiles:user_id(*), chits:chit_id(*)')
+        .single()
+      
+      if (memberError) {
+         if (memberError.code === '23505') throw new Error('Member is already enrolled in this scheme')
+         throw memberError
+      }
+
+      return membership
+    } catch (e) {
+      console.error('❌ Enrollment Failure:', e)
+      throw e
+    }
   },
 
   /**

@@ -78,12 +78,15 @@ const Reports = () => {
          chit_members: { profiles: l.profiles }
        }))
 
-       if (data.length === 0) {
-         data = [
-           { id: 'mock-1', amount_paid: 15000, paid_at: new Date().toISOString(), chit_members: { profiles: { full_name: 'Rahul Varma' } }, chits: { name: 'Gold Tier Fund' } },
-           { id: 'mock-2', amount_paid: 5000, paid_at: new Date(Date.now() - 3600000).toISOString(), chit_members: { profiles: { full_name: 'Anita Roy' } }, chits: { name: 'Silver Starter' } }
-         ]
-       }
+       data = filteredLedger.filter(l => 
+         l.transaction_type === 'credit' && 
+         new Date(l.created_at).toISOString().split('T')[0] === dateRange.from
+       ).map(l => ({
+         ...l,
+         amount_paid: l.amount,
+         paid_at: l.created_at,
+         chit_members: { profiles: l.profiles }
+       }))
     } else if (activeTab === 'profit') {
        const profitMap = {}
        filteredLedger.filter(l => {
@@ -100,15 +103,6 @@ const Reports = () => {
          .map(([month, amount]) => ({ month, amount }))
          .sort((a,b) => String(a.month).localeCompare(String(b.month)))
 
-       // Aesthetic fallback if no commissions have been realized yet
-       if (data.length === 0) {
-         data = [
-           { month: '2026-01', amount: 40000 },
-           { month: '2026-02', amount: 55000 },
-           { month: '2026-03', amount: 62000 },
-           { month: '2026-04', amount: 80000 }
-         ]
-       }
     } else if (activeTab === 'defaulters') {
        data = filteredDefaulters.map(d => ({
          full_name: d.profiles?.full_name,
@@ -118,12 +112,6 @@ const Reports = () => {
          total_overdue_amount: d.risk.pending
        }))
 
-       if (data.length === 0) {
-         data = [
-           { full_name: 'Vikram Singh', chit_name: 'Gold Tier Fund', overdue_count: 2, total_overdue_amount: 30000 },
-           { full_name: 'Meena Iyer', chit_name: 'Silver Starter', overdue_count: 1, total_overdue_amount: 5000 }
-         ]
-       }
     } else if (activeTab === 'members') {
        const growthMap = {}
        filteredMembers.forEach(m => {
@@ -139,23 +127,9 @@ const Reports = () => {
            return { month, count: running }
          })
 
-       if (data.length === 0) {
-         data = [
-           { month: '2026-01', count: 12 },
-           { month: '2026-02', count: 28 },
-           { month: '2026-03', count: 45 },
-           { month: '2026-04', count: 52 }
-         ]
-       }
     } else if (activeTab === 'auctions') {
        data = []
        
-       if (data.length === 0) {
-         data = [
-           { chits: { name: 'Gold Tier Fund' }, month_number: 1, winner_name: 'Rahul Varma', winning_bid_amount: 45000, dividend_amount: 5000 },
-           { chits: { name: 'Gold Tier Fund' }, month_number: 2, winner_name: 'Anita Roy', winning_bid_amount: 42000, dividend_amount: 5300 }
-         ]
-       }
     }
 
     return data
