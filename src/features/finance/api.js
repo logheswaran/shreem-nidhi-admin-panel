@@ -28,6 +28,7 @@ export const financeService = {
       console.error('❌ Error fetching loans:', error)
       throw error
     }
+    console.log(`📡 LOANS FETCHED: ${data?.length || 0} rows`)
     return data || []
   },
 
@@ -44,6 +45,7 @@ export const financeService = {
         throw error
       }
       
+      console.log(`📡 LEDGER FETCHED: ${data?.length || 0} rows`)
       return data || []
     } catch (e) {
       console.error('❌ Ledger fetch failed:', e)
@@ -78,14 +80,14 @@ export const financeService = {
     const firstDay = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth(), 1).toISOString().split('T')[0]
     const lastDay = new Date(currentMonthDate.getFullYear(), currentMonthDate.getMonth() + 1, 0).toISOString().split('T')[0]
     const today = new Date().toISOString().split('T')[0]
-
     try {
-      // Current Month Due & Paid
+      console.log('📡 Fetching collection summaries...')
       const { data: monthData, error: monthError } = await supabase
         .from('contributions')
         .select('amount_due, amount_paid, payment_status, due_date')
       
       if (monthError) throw monthError
+      console.log(`📡 CONTRIBUTIONS (Summary Scope): ${monthData?.length || 0} rows found`)
 
       const summary = {
         totalDueThisMonth: 0,
@@ -94,12 +96,11 @@ export const financeService = {
         totalOverdue: 0
       }
 
+      // We process all data for global context, but you can add month filtering here if needed
       monthData.forEach(c => {
-        if (true) {
-          summary.totalDueThisMonth += Number(c.amount_due)
-          if (c.payment_status === 'paid') {
-            summary.totalCollectedThisMonth += Number(c.amount_paid)
-          }
+        summary.totalDueThisMonth += Number(c.amount_due)
+        if (c.payment_status === 'paid') {
+          summary.totalCollectedThisMonth += Number(c.amount_paid)
         }
         
         if (c.payment_status === 'pending') {
@@ -119,24 +120,39 @@ export const financeService = {
 
   async getChitCollectionProgress() {
     try {
+      console.log('📡 Fetching chit collection progress...')
       const { data: chits, error: chitError } = await supabase.from('chits').select('*')
       if (chitError) throw chitError
+      console.log(`📡 CHITS FETCHED: ${chits?.length || 0} rows`)
 
       const { data: contributions, error: contError } = await supabase
         .from('contributions')
         .select('chit_id, amount_due, amount_paid, payment_status, due_date, month_number')
       
       if (contError) throw contError
+      console.log(`📡 CONTRIBUTIONS FETCHED: ${contributions?.length || 0} rows`)
+
+      const today = new Date().toISOString().split('T')[0]
 
       return chits.map(chit => {
         const chitConts = contributions.filter(c => c.chit_id === chit.id)
+        
         const totalDue = chitConts.reduce((sum, c) => sum + Number(c.amount_due), 0)
         const totalPaid = chitConts.reduce((sum, c) => sum + (c.payment_status === 'paid' ? Number(c.amount_paid) : 0), 0)
+        
+        // Calculate member counts for specific statuses
+        const membersPaid = chitConts.filter(c => c.payment_status === 'paid').length
+        const membersPending = chitConts.filter(c => c.payment_status === 'pending').length
+        const membersOverdue = chitConts.filter(c => c.payment_status === 'pending' && c.due_date < today).length
         
         return {
           ...chit,
           totalDue,
           totalPaid,
+          membersPaid,
+          membersPending,
+          membersOverdue,
+          totalMembers: chit.total_members || chit.max_members || 0,
           percentage: totalDue > 0 ? (totalPaid / totalDue) * 100 : 100
         }
       })

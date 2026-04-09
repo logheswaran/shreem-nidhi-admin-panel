@@ -148,26 +148,40 @@ const AdminControls = () => {
   const columns = {
     roles: [
       { 
-        header: 'Security Delegate', 
+        header: 'Admin Profile', 
         render: (row) => (
           <div className="flex items-center gap-4">
              <div className="w-10 h-10 rounded-2xl bg-brand-gold/5 flex items-center justify-center text-brand-gold border border-brand-gold/10">
                 <Fingerprint className="w-5 h-5" />
              </div>
              <div className="flex flex-col text-left">
-               <span className="font-bold text-[#2B2620]">{row.full_name}</span>
-               <span className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest leading-none">{row.mobile_number}</span>
+               <div className="flex items-center gap-2">
+                 <span className="font-bold text-[#2B2620]">{row.full_name || 'Anonymous User'}</span>
+                 <span className={`text-[8px] font-black px-2 py-0.5 rounded-full ${row.role_type === 'admin' ? 'bg-[#2B2620] text-white' : 'bg-brand-gold/10 text-brand-gold'}`}>
+                   {row.role_type === 'admin' ? 'ADMIN' : 'MEMBER'}
+                 </span>
+               </div>
+               <span className="text-[10px] text-brand-text/30 font-bold uppercase tracking-widest leading-none mt-1">{row.mobile_number}</span>
              </div>
           </div>
         )
       },
       { 
-        header: 'Clearance Matrix', 
+        header: 'Access Rights', 
         render: (row) => (
-          <div className="flex gap-1">
-             {['Auctions', 'Payments', 'Ledger'].map(mod => (
-               <div key={mod} className={`w-2.5 h-2.5 rounded-full ${row.role_type === 'admin' ? 'bg-green-500' : 'bg-brand-gold/20'}`} title={`${mod} Access`}></div>
-             ))}
+          <div className="flex flex-col gap-2">
+             <div className="flex gap-1.5">
+                {['Auctions', 'Payments', 'Ledger'].map(mod => (
+                  <div 
+                    key={mod} 
+                    className={`w-2.5 h-2.5 rounded-full ${row.role_type === 'admin' ? 'bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]' : 'bg-brand-gold/20'}`} 
+                    title={`${mod} Access: ${row.role_type === 'admin' ? 'Granted' : 'Restricted'}`}
+                  ></div>
+                ))}
+             </div>
+             <span className="text-[8px] font-black uppercase tracking-tighter text-brand-text/40">
+               {row.role_type === 'admin' ? 'Full Authority' : 'Restricted Access'}
+             </span>
           </div>
         )
       },

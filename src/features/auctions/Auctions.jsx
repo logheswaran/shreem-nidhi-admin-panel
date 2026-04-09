@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react'
+import React, { useState, useMemo, useEffect } from 'react'
 import { Gavel, Search, Plus, Calendar, Users, Trophy, ChevronRight, Gavel as GavelIcon, Info, CheckCircle2, History } from 'lucide-react'
 import { useAuctionRounds, useBids, useAuctionActions } from './hooks'
 import { useChits } from '../chits/hooks'
@@ -12,10 +12,25 @@ import { supabase } from '../../core/lib/supabase'
 
 const Auctions = () => {
   const { data: allChits = [] } = useChits()
-  const auctionChits = allChits.filter(c => c.chit_type === 'auction')
   
-  const [activeChitId, setActiveChitId] = useState(auctionChits[0]?.id || null)
+  // Broadened filter: Traditional schemes are usually the ones that use auctions
+  const auctionChits = allChits.filter(c => 
+    c.chit_type === 'auction' || c.chit_type === 'traditional'
+  )
+  
+  console.log('📡 AUCTION ELIGIBLE CHITS:', auctionChits.length, 'of', allChits.length, 'total')
+  
+  const [activeChitId, setActiveChitId] = useState(null)
+
+  // Sync activeChitId when auctionChits load
+  useEffect(() => {
+    if (!activeChitId && auctionChits.length > 0) {
+      setActiveChitId(auctionChits[0].id)
+    }
+  }, [auctionChits, activeChitId])
+
   const { data: rounds = [], isLoading: loading } = useAuctionRounds(activeChitId)
+  console.log(`📡 AUCTION ROUNDS FOR ${activeChitId}:`, rounds.length)
   
   const [selectedRoundId, setSelectedRoundId] = useState(null)
   const { data: bids = [], isLoading: bidsLoading } = useBids(selectedRoundId)
@@ -92,7 +107,7 @@ const Auctions = () => {
     { header: 'Bidding Status', render: (row) => <StatusBadge status={row.status} /> },
     { 
       header: 'Winning Bid', 
-      render: (row) => row.status === 'closed' ? <span className="font-bold text-green-600">₹{Number(row.winning_bid_amount).toLocaleString()}</span> : <span className="italic text-brand-text/30">In Progress</span> 
+      render: (row) => row.status === 'closed' ? <span className="font-bold text-green-600">₹{Number(row.winning_bid || 0).toLocaleString()}</span> : <span className="italic text-brand-text/30">In Progress</span> 
     },
     { 
       header: 'Action', 

@@ -27,6 +27,7 @@ function App() {
           <AppRouter />
           <Toaster 
             position="top-right"
+            containerStyle={{ zIndex: 999999 }}
             toastOptions={{
               className: 'heritage-toast',
               style: {

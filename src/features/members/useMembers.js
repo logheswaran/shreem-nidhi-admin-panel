@@ -68,8 +68,7 @@ export const useMembers = () => {
 
   // 📡 REAL-TIME SUBSCRIPTION
   useEffect(() => {
-    // Force refresh on mount
-    console.log('🔄 Triggering mount-time refetch...')
+    // Force refresh on mount only
     refetch()
 
     // Subscribe to changes
@@ -79,7 +78,6 @@ export const useMembers = () => {
         'postgres_changes',
         { event: '*', schema: 'public', table: 'chit_members' },
         () => {
-          console.log('⚡ Table chit_members changed. Invalidating query cache.')
           queryClient.invalidateQueries({ queryKey: ['members'] })
         }
       )
@@ -88,7 +86,7 @@ export const useMembers = () => {
     return () => {
       supabase.removeChannel(channel)
     }
-  }, [queryClient, refetch])
+  }, []) // Empty dependency array for "mount only"
 
   // DEBUG LOGGING
   useEffect(() => {

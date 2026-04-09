@@ -1,119 +1,8 @@
 import { supabase } from '../../core/lib/supabase'
 
-// --- CONSTANTS & MOCKS --- //
+// --- READS --- //
 
-const MOCK_CHITS = [
-  {
-    id: 'C001',
-    name: 'SreeNidhi 250 (Pioneer)',
-    chit_type: 'traditional',
-    status: 'active',
-    monthly_contribution: 25000,
-    max_members: 20,
-    members_count: 20,
-    current_month: 12,
-    total_months: 20,
-    total_collected: 4500000,
-    pending_amount: 50000,
-    default_count: 1,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 365).toISOString(),
-  },
-  {
-    id: 'C002',
-    name: 'Golden Harvest (Auction)',
-    chit_type: 'traditional',
-    status: 'active',
-    monthly_contribution: 10000,
-    max_members: 50,
-    members_count: 50,
-    current_month: 45,
-    total_months: 50,
-    total_collected: 22000000,
-    pending_amount: 0,
-    default_count: 0,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 400).toISOString(),
-  },
-  {
-    id: 'C003',
-    name: 'Shreem Nidhi Special (Random)',
-    chit_type: 'random',
-    status: 'active',
-    monthly_contribution: 50000,
-    max_members: 10,
-    members_count: 8,
-    current_month: 3,
-    total_months: 10,
-    total_collected: 1200000,
-    pending_amount: 150000,
-    default_count: 3, // CRITICAL RISK
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 90).toISOString(),
-  },
-  {
-    id: 'C004',
-    name: 'New Year Premium 500',
-    chit_type: 'traditional',
-    status: 'forming',
-    monthly_contribution: 10000,
-    max_members: 50,
-    members_count: 42,
-    current_month: 0,
-    total_months: 50,
-    total_collected: 0,
-    pending_amount: 0,
-    default_count: 0,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 10).toISOString(),
-  },
-  {
-    id: 'C005',
-    name: 'Completed Legacy Group',
-    chit_type: 'traditional',
-    status: 'completed',
-    monthly_contribution: 5000,
-    max_members: 20,
-    members_count: 20,
-    current_month: 20,
-    total_months: 20,
-    total_collected: 2000000,
-    pending_amount: 0,
-    default_count: 0,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 700).toISOString(),
-  },
-  {
-    id: 'C006',
-    name: 'At Risk Auction 100',
-    chit_type: 'traditional',
-    status: 'active',
-    monthly_contribution: 10000,
-    max_members: 10,
-    members_count: 10,
-    current_month: 5,
-    total_months: 10,
-    total_collected: 300000,
-    pending_amount: 100000, // HIGH PENDING
-    default_count: 2,
-    created_at: new Date(Date.now() - 1000 * 60 * 60 * 24 * 150).toISOString(),
-  }
-]
-
-// --- HELPERS --- //
-
-const isDemo = () => typeof window !== 'undefined' && localStorage.getItem('sreem_nidhi_demo') === 'true'
-const isPro = () => typeof window !== 'undefined' && localStorage.getItem('sreem_nidhi_pro_mode') === 'true'
-
-/**
- * Computes financial health and summary from the contributions table.
- * This is the 'Client-Side Computation' requested by the user.
- */
 export const getChitFinancials = async (chitId) => {
-  if (isDemo() && !isPro()) {
-    const mock = MOCK_CHITS.find(c => c.id === chitId)
-    return {
-      collected: mock?.total_collected || 0,
-      pending: mock?.pending_amount || 0,
-      defaults: mock?.default_count || 0
-    }
-  }
-
   try {
     const { data, error } = await supabase
       .from('contributions')
@@ -148,26 +37,14 @@ const mapChit = (chit) => {
   if (!chit) return null
   return {
     ...chit,
-    // Database (total_members) -> UI (max_members)
     max_members: chit.total_members || chit.max_members || chit.members_limit,
-    // Database (monthly_amount) -> UI (monthly_contribution)
     monthly_contribution: chit.monthly_amount || chit.monthly_contribution,
-    // Database (duration_months) -> UI (total_months)
     total_months: chit.duration_months || chit.total_months,
-    // Ensure membership count is extracted from the join result
     members_count: chit.members_count || chit.chit_members?.[0]?.count || 0
   }
 }
 
-// --- READS --- //
-
 export const getChits = async () => {
-  const proMode = isPro()
-  const demoMode = isDemo()
-
-  console.group('📡 SUPABASE DEBUG: getChits')
-  console.log('Mode:', { proMode, demoMode })
-
   try {
     const { data, error } = await supabase
       .from('chits')
@@ -182,37 +59,13 @@ export const getChits = async () => {
       throw error
     }
 
-    console.log('Database Result:', data)
-    console.groupEnd()
-
-    // IF PRO MODE: Return exact DB state regardless of count
-    if (proMode) {
-      return (data || []).map(mapChit)
-    }
-
-    // IF DB EMPTY & DEMO MODE: Return high-fidelity mocks
-    if ((!data || data.length === 0) && demoMode) {
-      console.warn('⚠️ No database chits found. Injecting mock lifecycle protocols.')
-      return MOCK_CHITS
-    }
-
-    // Normal mapped results
     return (data || []).map(mapChit)
   } catch (error) {
     console.error('Supabase Critical Failure:', error)
-    console.groupEnd()
-    if (demoMode && !proMode) return MOCK_CHITS
     throw error
   }
 }
-
 export const getChitById = async (id) => {
-  // Try to find in mocks first if in demo
-  if (isDemo() && !isPro()) {
-    const mock = MOCK_CHITS.find(c => c.id === id)
-    if (mock) return { ...mock, chit_members: [] }
-  }
-
   const { data, error } = await supabase
     .from('chits')
     .select(`*, chit_members (*, profiles (*))`)
@@ -221,13 +74,9 @@ export const getChitById = async (id) => {
   
   if (error) throw error
   
-  // Normalize columns
   return mapChit(data)
 }
 
-/**
- * Full details including aggregated financials and member snapshots.
- */
 export const getChitFullDetails = async (id) => {
   const [chit, financials] = await Promise.all([
     getChitById(id),
@@ -251,29 +100,13 @@ export const getActiveAuctionRound = async (chitId) => {
     .single()
   
   if (error) {
-    if (error.code === 'PGRST116') return null // No rows returned
+    if (error.code === 'PGRST116') return null
     throw error
   }
   return data?.id
 }
 
-// --- WRITES --- //
-
 export const createChit = async (chitData) => {
-  if (isDemo() && !isPro()) {
-    const newChit = {
-      ...chitData,
-      id: `C${Math.floor(100 + Math.random() * 900)}`,
-      status: 'forming',
-      current_month: 0,
-      members_count: 0,
-      created_at: new Date().toISOString()
-    }
-    // We don't persist mocks between sessions globally, 
-    // but React Query will show it until refresh.
-    return newChit
-  }
-
   const { data, error } = await supabase
     .from('chits')
     .insert([chitData])
@@ -292,10 +125,7 @@ export const updateChit = async (id, updateData) => {
   return data[0]
 }
 
-// --- STRICT RPC CONTROLLERS --- //
-
 export const startMonth = async (chitId) => {
-  if (isDemo() && !isPro()) return true
   const { error } = await supabase.rpc('create_month_contributions', {
     p_chit_id: chitId
   })
@@ -303,7 +133,6 @@ export const startMonth = async (chitId) => {
 }
 
 export const selectWinner = async (chitId) => {
-  if (isDemo() && !isPro()) return true
   const { error } = await supabase.rpc('select_winner', {
     p_chit_id: chitId
   })
@@ -311,7 +140,6 @@ export const selectWinner = async (chitId) => {
 }
 
 export const openAuction = async (chitId, month) => {
-  if (isDemo() && !isPro()) return true
   const { error } = await supabase.rpc('open_auction', {
     p_chit_id: chitId,
     p_month_number: month
@@ -320,7 +148,6 @@ export const openAuction = async (chitId, month) => {
 }
 
 export const closeAuction = async (auctionRoundId) => {
-  if (isDemo() && !isPro()) return true
   const { error } = await supabase.rpc('close_auction', {
     p_auction_round_id: auctionRoundId
   })
@@ -328,14 +155,12 @@ export const closeAuction = async (auctionRoundId) => {
 }
 
 export const processMaturity = async (chitId) => {
-  if (isDemo() && !isPro()) return true
   const { error } = await supabase.rpc('process_maturity', {
     p_chit_id: chitId
   })
   if (error) throw error
 }
 
-// Legacy compat object
 export const chitService = {
   getChits,
   getChitById,

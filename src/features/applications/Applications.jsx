@@ -12,15 +12,14 @@ import PremiumDropdown from '../../shared/components/ui/PremiumDropdown'
 import { useApplications, useApplicationActions } from './hooks'
 import { useChits } from '../chits/hooks'
 import ApplicationDetailModal from './components/ApplicationDetailModal'
-import ApplicationFormModal from './components/ApplicationFormModal'
 import toast from 'react-hot-toast'
 
 const Applications = () => {
-  const { data: apps = [], isLoading: loading } = useApplications()
+  const { data: apps = [], isLoading: loading, isError, error } = useApplications()
   const { approve, reject, requestInfo, isLoading: processing } = useApplicationActions()
   const { data: chits = [] } = useChits()
   
-  // Local state for combined real + mock data simulation
+  // Local state for combined real and updated data
   const [localApps, setLocalApps] = useState([])
   const [activePipeline, setActivePipeline] = useState('pending')
   const [searchTerm, setSearchTerm] = useState('')
@@ -29,12 +28,17 @@ const Applications = () => {
   const [isDetailOpen, setIsDetailOpen] = useState(false)
   const [isFormOpen, setIsFormOpen] = useState(false)
 
-  // Sync server data with local state for simulation
+  // Sync server data with local state
   useEffect(() => {
-    if (apps.length > 0) {
-      setLocalApps(apps)
-    }
+    setLocalApps(apps)
   }, [apps])
+
+  // Handle Fetch Errors
+  useEffect(() => {
+    if (isError) {
+      toast.error('Failed to sync with central database: ' + (error?.message || 'Unknown error'))
+    }
+  }, [isError, error])
 
   // Pipeline Filtering Logic
   const filteredByPipeline = useMemo(() => {
@@ -46,13 +50,16 @@ const Applications = () => {
     })
   }, [localApps, activePipeline])
 
-  // Advanced Search & Filter Logic
   const processedApps = useMemo(() => {
     return filteredByPipeline.filter(app => {
+      const name = app.profiles?.full_name || ''
+      const phone = app.profiles?.mobile_number || ''
+      const chitName = app.chits?.name || ''
+
       const matchesSearch = 
-        app.profiles?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        app.profiles?.mobile_number?.includes(searchTerm) ||
-        app.chits?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+        name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        phone.includes(searchTerm) ||
+        chitName.toLowerCase().includes(searchTerm.toLowerCase())
       
       const matchesRisk = riskFilter === 'ALL' || app.risk?.level === riskFilter
       
@@ -76,7 +83,9 @@ const Applications = () => {
       await approve(id)
       setLocalApps(prev => prev.map(a => a.id === id ? { ...a, status: 'approved', reviewed_at: new Date().toISOString() } : a))
       setIsDetailOpen(false)
-    } catch (e) {}
+    } catch (e) {
+      toast.error('Approval failed: ' + (e.message || 'Check database permissions'))
+    }
   }
 
   const handleReject = async ({ id, reason }) => {
@@ -84,7 +93,9 @@ const Applications = () => {
       await reject({ id, reason })
       setLocalApps(prev => prev.map(a => a.id === id ? { ...a, status: 'rejected', rejection_reason: reason, reviewed_at: new Date().toISOString() } : a))
       setIsDetailOpen(false)
-    } catch (e) {}
+    } catch (e) {
+      toast.error('Rejection failed: ' + (e.message || 'Check database permissions'))
+    }
   }
 
   const handleRequestInfo = async ({ id, message }) => {
@@ -92,13 +103,11 @@ const Applications = () => {
       await requestInfo({ id, message })
       setLocalApps(prev => prev.map(a => a.id === id ? { ...a, status: 'info_requested' } : a))
       setIsDetailOpen(false)
-    } catch (e) {}
+    } catch (e) {
+      toast.error('Information request failed: ' + (e.message || 'Check status constraints in DB'))
+    }
   }
 
-  const handleAddMock = (newApp) => {
-    setLocalApps([newApp, ...localApps])
-    toast.success('New institutional applicant added to queue')
-  }
 
   const columns = [
     { 
@@ -269,12 +278,6 @@ const Applications = () => {
                { value: 'HIGH', label: 'High Risk' }
              ]}
            />
-           <button 
-             onClick={() => setIsFormOpen(true)}
-             className="heritage-gradient text-white px-8 py-4 rounded-full font-black text-[10px] uppercase tracking-[0.2em] shadow-xl hover:brightness-110 active:scale-95 transition-all flex items-center gap-3"
-           >
-             <Plus className="w-4 h-4" /> Provision Mock
-           </button>
         </div>
       </div>
 
@@ -300,13 +303,6 @@ const Applications = () => {
         onReject={handleReject}
         onRequestInfo={handleRequestInfo}
         processing={processing}
-      />
-
-      <ApplicationFormModal 
-        isOpen={isFormOpen}
-        onClose={() => setIsFormOpen(false)}
-        onSubmit={handleAddMock}
-        chits={chits}
       />
     </div>
   )
