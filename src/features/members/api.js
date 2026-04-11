@@ -211,19 +211,34 @@ export const memberService = {
    */
   async createMember(payload) {
     try {
-      const { full_name, mobile_number, email, chit_id, status } = payload
+      console.log('🚀 Starting enrollment with payload:', payload)
+      // Normalize payload (empty strings to null for optional database fields)
+      const full_name = payload.full_name;
+      const mobile_number = payload.mobile_number;
+      const email = payload.email === '' ? null : payload.email;
+      const chit_id = payload.chit_id === '' ? null : payload.chit_id;
+      const status = payload.status || 'active';
 
       // 1. Ensure Profile exists (or create one)
+      console.log('📡 Checking for existing profile with mobile:', mobile_number)
       let { data: profile, error: profileFetchError } = await supabase
         .from('profiles')
         .select('id')
         .eq('mobile_number', mobile_number)
         .maybeSingle()
 
+      if (profileFetchError) {
+        console.error('❌ Profile lookup error:', profileFetchError)
+        throw profileFetchError
+      }
+
       if (!profile) {
+        console.log('✨ Creating new profile for:', full_name)
+        const newId = crypto.randomUUID()
         const { data: newProfile, error: profileCreateError } = await supabase
           .from('profiles')
           .insert([{ 
+            id: newId,
             full_name, 
             mobile_number, 
             email,
@@ -232,11 +247,18 @@ export const memberService = {
           .select()
           .single()
         
-        if (profileCreateError) throw profileCreateError
+        if (profileCreateError) {
+          console.error('❌ Profile creation error:', profileCreateError)
+          throw profileCreateError
+        }
         profile = newProfile
+        console.log('✅ New profile created:', profile.id)
+      } else {
+        console.log('ℹ️ Found existing profile:', profile.id)
       }
 
       // 2. Link to Chit Scheme
+      console.log('📡 Linking profile to chit scheme:', chit_id)
       const { data: membership, error: memberError } = await supabase
         .from('chit_members')
         .insert([{
@@ -248,13 +270,15 @@ export const memberService = {
         .single()
       
       if (memberError) {
+         console.error('❌ Membership link error:', memberError)
          if (memberError.code === '23505') throw new Error('Member is already enrolled in this scheme')
          throw memberError
       }
 
+      console.log('✅ Enrollment successful:', membership)
       return membership
     } catch (e) {
-      console.error('❌ Enrollment Failure:', e)
+      console.error('❌ Final Enrollment Failure Catch:', e)
       throw e
     }
   },

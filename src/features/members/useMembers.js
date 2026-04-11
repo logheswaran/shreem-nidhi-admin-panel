@@ -27,7 +27,7 @@ export const useMembers = () => {
     },
     onError: (err) => {
       console.error('Enrollment error:', err)
-      toast.error('Failed to enroll member')
+      toast.error(err.message || 'Failed to enroll member')
     }
   })
 
