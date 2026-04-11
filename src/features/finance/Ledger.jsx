@@ -205,9 +205,8 @@ const Ledger = () => {
 
   const handleCreateEntry = async ({ payload, metadata }) => {
     try {
-      const member = members.find(m => m.user_id === payload.user_id);
       await addEntry({ 
-        payload: { ...payload, full_name: member?.profiles?.full_name }, 
+        payload, 
         metadata 
       });
       setShowAddModal(false);

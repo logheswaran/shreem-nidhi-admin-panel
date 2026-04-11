@@ -81,7 +81,7 @@ const LedgerFormModal = ({ isOpen, onClose, onSubmit, initialData = null, member
             onChange={(val) => setFormData(prev => ({ ...prev, user_id: val }))}
             options={members.map(member => ({
               value: member.user_id,
-              label: `${member.profiles?.full_name} (${member.profiles?.phone_number})`
+              label: `${member.profiles?.full_name} (${member.profiles?.mobile_number})`
             }))}
           />
 

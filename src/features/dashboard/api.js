@@ -7,17 +7,16 @@ import { supabase } from '../../core/lib/supabase'
  * Returns aggregated counts and totals for the top stats bar.
  */
 export const getDashboardStats = async () => {
-  // A. Total Members
+  // A. Total Members (Enrolled Memberships)
   const membersPromise = supabase
-    .from('profiles')
-    .select('id', { count: 'exact' })
-    .eq('role_type', 'member')
+    .from('chit_members')
+    .select('id', { count: 'exact', head: true })
 
-  // B. Active Chits
+  // B. Your Chits (Active or Forming)
   const chitsPromise = supabase
     .from('chits')
     .select('id', { count: 'exact', head: true })
-    .eq('status', 'active')
+    .in('status', ['active', 'forming'])
 
   // C. Total Collection (All-time paid contributions)
   const collectionPromise = supabase
@@ -31,13 +30,11 @@ export const getDashboardStats = async () => {
     .select('id', { count: 'exact', head: true })
     .eq('status', 'pending')
   
-  // E. Pending Collection (Current month pending)
-  const currentMonth = new Date().getMonth() + 1
+  // E. Pending Collection (Total outstanding)
   const pendingCollectionPromise = supabase
     .from('contributions')
     .select('amount_due')
     .eq('payment_status', 'pending')
-    .eq('month_number', currentMonth)
 
   const [membersRes, chitsRes, collectionRes, payoutsRes, pendingRes] = await Promise.all([
     membersPromise,

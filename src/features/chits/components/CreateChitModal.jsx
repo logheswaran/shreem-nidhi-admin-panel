@@ -8,6 +8,29 @@ import PremiumDropdown from '../../../shared/components/ui/PremiumDropdown'
  * FEATURE: Create Chit Modal (Standardized Refactor)
  * Standardized using the central GlobalModal framework.
  */
+const InputField = ({ label, icon: Icon, name, type = 'text', placeholder, value, onChange, ...props }) => (
+  <div className="space-y-1.5">
+    <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#2B2620]/40 ml-0.5">
+      {label}
+    </label>
+    <div className="relative group">
+      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gold/40 group-focus-within:text-brand-gold transition-colors">
+        <Icon className="w-3.5 h-3.5" />
+      </div>
+      <input
+        type={type}
+        name={name}
+        placeholder={placeholder}
+        className="w-full bg-[#FDFCF7] border border-brand-gold/10 rounded-xl py-3 pl-11 pr-4 text-xs font-bold text-[#2B2620] focus:outline-none focus:border-brand-gold transition-all"
+        value={value}
+        onChange={onChange}
+        required
+        {...props}
+      />
+    </div>
+  </div>
+)
+
 const CreateChitModal = ({ isOpen, onClose }) => {
   const { mutate: createChit, isLoading } = useCreateChit()
   const [formData, setFormData] = useState({
@@ -15,19 +38,29 @@ const CreateChitModal = ({ isOpen, onClose }) => {
     chit_type: 'traditional',
     monthly_contribution: '',
     max_members: '',
-    total_months: '',
-    description: ''
+    total_months: ''
   })
 
   const handleSubmit = (e) => {
     e.preventDefault()
-    createChit({
-      ...formData,
-      monthly_contribution: Number(formData.monthly_contribution),
-      max_members: Number(formData.max_members),
-      total_months: Number(formData.total_months),
-      status: 'forming'
-    }, {
+    
+    // Map UI fields to database schema columns
+    const payload = {
+      name: formData.name,
+      chit_type: formData.chit_type,
+      monthly_amount: Number(formData.monthly_contribution),
+      total_members: Number(formData.max_members),
+      duration_months: Number(formData.total_months),
+      status: 'forming',
+      // Baseline defaults for required schema columns
+      interest_rate_maturity: 15, // 15% default maturity interest
+      loan_percentage_cap: 80,     // 80% default loan cap
+      loan_interest_rate: 18,      // 18% default loan interest
+      commission_rate: 0,
+      max_bid_percentage: 40
+    }
+
+    createChit(payload, {
       onSuccess: () => {
         onClose()
         setFormData({
@@ -35,35 +68,11 @@ const CreateChitModal = ({ isOpen, onClose }) => {
           chit_type: 'traditional',
           monthly_contribution: '',
           max_members: '',
-          total_months: '',
-          description: ''
+          total_months: ''
         })
       }
     })
   }
-
-  const InputField = ({ label, icon: Icon, name, type = 'text', placeholder, ...props }) => (
-    <div className="space-y-1.5">
-      <label className="text-[9px] font-black uppercase tracking-[0.2em] text-[#2B2620]/40 ml-0.5">
-        {label}
-      </label>
-      <div className="relative group">
-        <div className="absolute left-4 top-1/2 -translate-y-1/2 text-brand-gold/40 group-focus-within:text-brand-gold transition-colors">
-          <Icon className="w-3.5 h-3.5" />
-        </div>
-        <input
-          type={type}
-          name={name}
-          placeholder={placeholder}
-          className="w-full bg-[#FDFCF7] border border-brand-gold/10 rounded-xl py-3 pl-11 pr-4 text-xs font-bold text-[#2B2620] focus:outline-none focus:border-brand-gold transition-all"
-          value={formData[name]}
-          onChange={(e) => setFormData({ ...formData, [name]: e.target.value })}
-          required
-          {...props}
-        />
-      </div>
-    </div>
-  )
 
   return (
     <GlobalModal
@@ -81,7 +90,7 @@ const CreateChitModal = ({ isOpen, onClose }) => {
           <p className="text-[11px] text-brand-text/50 leading-relaxed font-bold uppercase tracking-wider mb-8">
             Global Governance Framework
           </p>
-          <div className="flex items-start gap-3 mt-auto">
+          <div className="items-start gap-3 mt-auto flex">
             <Info className="w-4 h-4 text-brand-gold mt-0.5" />
             <p className="text-[9px] leading-relaxed text-[#2B2620]/40 font-bold uppercase tracking-widest">
               Methodology selection determines specific payout mechanics.
@@ -97,6 +106,8 @@ const CreateChitModal = ({ isOpen, onClose }) => {
               icon={Landmark} 
               name="name" 
               placeholder="e.g. SreeNidhi Heritage 500"
+              value={formData.name}
+              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
             />
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
@@ -111,11 +122,13 @@ const CreateChitModal = ({ isOpen, onClose }) => {
               />
 
               <InputField 
-                label="Monthly Savngs" 
+                label="Monthly Savings" 
                 icon={DollarSign} 
                 type="number"
                 name="monthly_contribution" 
                 placeholder="₹ Amount"
+                value={formData.monthly_contribution}
+                onChange={(e) => setFormData({ ...formData, monthly_contribution: e.target.value })}
               />
             </div>
 
@@ -126,6 +139,8 @@ const CreateChitModal = ({ isOpen, onClose }) => {
                 type="number"
                 name="max_members" 
                 placeholder="e.g. 20"
+                value={formData.max_members}
+                onChange={(e) => setFormData({ ...formData, max_members: e.target.value })}
               />
               <InputField 
                 label="Tenure (Months)" 
@@ -133,6 +148,8 @@ const CreateChitModal = ({ isOpen, onClose }) => {
                 type="number"
                 name="total_months" 
                 placeholder="e.g. 20"
+                value={formData.total_months}
+                onChange={(e) => setFormData({ ...formData, total_months: e.target.value })}
               />
             </div>
 

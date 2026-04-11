@@ -47,14 +47,25 @@ const RiskPanel = () => {
   const handleMassReminder = async () => {
     try {
       toast.loading('Initializing mass recovery dispatch...', { id: 'mass' })
-      await Promise.all(defaulters.map(d => {
-        const userId = d.user_id
-        const chitId = d.chit_id
-        return notificationService.sendReminder(userId, chitId, d.total_overdue_amount)
-      }))
-      toast.success(`Broadcasting complete: ${defaulters.length} accounts notified.`, { id: 'mass' })
+      let successCount = 0
+      
+      // Use sequential or controlled parallel execution for better reliability
+      for (const d of defaulters) {
+        try {
+          await notificationService.sendReminder(d.user_id, d.chit_id, d.total_overdue_amount)
+          successCount++
+        } catch (e) {
+          console.error(`Failed to notify ${d.user_id}:`, e)
+        }
+      }
+      
+      if (successCount === 0 && defaulters.length > 0) {
+        throw new Error('All dispatches failed. Check database permissions.')
+      }
+
+      toast.success(`Broadcasting complete: ${successCount} of ${defaulters.length} accounts notified.`, { id: 'mass' })
     } catch (err) {
-      toast.error('Incomplete dispatch sequence')
+      toast.error(err.message || 'Incomplete dispatch sequence', { id: 'mass' })
     }
   }
 
