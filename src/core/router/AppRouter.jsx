@@ -24,6 +24,7 @@ const RiskPanel = lazy(() => import('../../features/risk/RiskPanel'))
 const Reports = lazy(() => import('../../features/reports/Reports'))
 const AdminControls = lazy(() => import('../../features/admin/AdminControls'))
 const Profile = lazy(() => import('../../features/auth/Profile'))
+const Agents = lazy(() => import('../../features/agents/Agents'))
 
 // Loading Skeleton for Transitions
 const FeatureLoader = () => (
@@ -52,6 +53,7 @@ const router = createHashRouter([
           { path: 'members', element: <Suspense fallback={<FeatureLoader />}><Members /></Suspense> },
           { path: 'members/:id', element: <Suspense fallback={<FeatureLoader />}><MemberProfile /></Suspense> },
           { path: 'members/applications', element: <Suspense fallback={<FeatureLoader />}><Applications /></Suspense> },
+          { path: 'agents', element: <Suspense fallback={<FeatureLoader />}><Agents /></Suspense> },
           { path: 'payments', element: <Suspense fallback={<FeatureLoader />}><PaymentDashboard /></Suspense> },
           { path: 'payments/:id', element: <Suspense fallback={<FeatureLoader />}><PaymentGrid /></Suspense> },
           { path: 'operations', element: <Suspense fallback={<FeatureLoader />}><MonthlyOperations /></Suspense> },
