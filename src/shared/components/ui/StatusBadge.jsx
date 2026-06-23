@@ -17,6 +17,7 @@ const StatusBadge = ({ status, size = 'md' }) => {
     rejected: 'bg-red-50 text-red-600 border-red-100',
     verified: 'bg-emerald-50/50 text-emerald-600 border-emerald-100',
     approved: 'bg-emerald-50 text-emerald-700 border-emerald-100',
+    suspended: 'bg-red-50 text-red-600 border-red-100',
     
     // Financial Health
     at_risk: 'bg-amber-50 text-amber-600 border-amber-100',

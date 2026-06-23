@@ -17,7 +17,8 @@ import {
   AlertTriangle,
   BarChart3,
   Bell,
-  Settings
+  Settings,
+  Percent
 } from 'lucide-react'
 import { useAuth } from '../../../core/providers/AuthProvider'
 import { motion } from 'framer-motion'
@@ -27,6 +28,7 @@ const menuItems = [
   { path: '/chits', label: 'Chit Groups', icon: Coins },
   { path: '/members', label: 'Members', icon: Users },
   { path: '/members/applications', label: 'Applications', icon: UserPlus },
+  { path: '/agents', label: 'Agents', icon: Percent },
   { path: '/payments', label: 'Payments', icon: BadgeIndianRupee },
   { path: '/auctions', label: 'Auctions', icon: Gavel },
   { path: '/ledger', label: 'Ledger', icon: History },
